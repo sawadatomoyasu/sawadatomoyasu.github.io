@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>語彙記憶課題（Googleフォーム：グリッド転置送信）</title>
+<style>
+  :root { --bg:#0b0f14; --fg:#e8f0fe; --muted:#9fb3c8; --accent:#6aa9ff;
+          --ok:#0fd47c; --ng:#ff6b6b; --card:#0e1621; --border:#1f3248; }
+  html,body{margin:0;background:var(--bg);color:var(--fg);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;}
+  .center{min-height:100vh;display:grid;place-items:center;}
+  .hidden{display:none!important;}
+  #stage{display:flex;height:100vh;width:100vw;align-items:center;justify-content:center;}
+  #word{font-size:clamp(44px,10vw,110px);font-weight:800;}
+  /* 追加: 無表示スクリーン（背景だけ） */
+  #blank{display:flex;height:100vh;width:100vw;}
+  #arith{display:flex;height:100vh;width:100vw;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+  #arithNum{font-size:clamp(44px,10vw,110px);font-weight:800;}
+  #arithForm input[type="number"]{width:160px;background:var(--card);color:var(--fg);border:1px solid var(--border);border-radius:10px;font-size:18px;padding:8px;}
+  #arithForm input[type="submit"]{background:var(--accent);color:#041423;border:none;
+    padding:10px 18px;border-radius:10px;font-weight:700;font-size:16px;margin-left:8px;cursor:pointer;}
+  #arithFeedback{min-height:1.4em}
+  #inputWrap{display:grid;min-height:100vh;place-items:center;padding:20px;gap:10px;}
+  textarea{width:min(800px,90vw);height:200px;background:var(--card);color:var(--fg);
+    border:1px solid var(--border);border-radius:10px;font-size:16px;padding:10px;}
+  button,input[type="submit"]{background:var(--accent);color:#041423;border:none;
+    padding:10px 18px;border-radius:10px;font-weight:700;font-size:16px;margin:6px;cursor:pointer;}
+  button.secondary{background:transparent;color:var(--fg);border:1px solid var(--border);}
+  #results{width:min(900px,94vw);margin:20px auto;}
+  table{width:100%;border-collapse:collapse;}
+  th,td{border-bottom:1px solid var(--border);padding:6px;text-align:center;}
+  #resultBody td:first-child,#resultHead th:first-child{text-align:left;}
+  .ok{color:var(--ok);font-weight:800;}
+  .ng{color:var(--ng);font-weight:800;}
+  #final{width:min(1100px,96vw);margin:28px auto 40px;}
+  #final h2{margin:0 0 12px 0;}
+  #finalTable th,#finalTable td{padding:8px;border-bottom:1px solid var(--border);}
+  #finalTable thead th{position:sticky;top:0;background:var(--bg);}
+  #finalTable .pos{text-align:right;color:var(--muted);}
+  .cell-ok{color:var(--ok);font-weight:800;}
+  .cell-ng{color:var(--ng);font-weight:800;}
+  .cell-na{color:#5f738a;}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:center;}
+  .note{color:var(--muted);font-size:14px;margin-top:-6px}
+</style>
+</head>
+<body>
+
+<!-- 開始画面 -->
+<div id="startScreen" class="center">
+  <button id="startBtn">課題を開始</button>
+</div>
+
+<!-- 呈示（単語） -->
+<div id="stage" class="hidden" aria-live="polite" aria-atomic="true">
+  <div id="word" role="heading" aria-level="1"></div>
+</div>
+
+<!-- 追加: 無表示スクリーン（奇数試行で30秒） -->
+<div id="blank" class="hidden" aria-hidden="true"></div>
+
+<!-- 暗算課題（偶数試行差し込み、指示文なし） -->
+<div id="arith" class="hidden" aria-live="polite" aria-atomic="true">
+  <div id="arithNum">+</div>
+  <form id="arithForm" class="hidden" autocomplete="off">
+    <input type="number" id="arithAnswer" inputmode="numeric" />
+    <input type="submit" value="解答を送信">
+  </form>
+  <div id="arithFeedback" class="note"></div>
+</div>
+
+<!-- 入力（語彙再生） -->
+<form id="inputWrap" class="hidden" autocomplete="off">
+  <p class="note">思い出した単語を改行またはカンマ区切りで入力してください。</p>
+  <textarea id="recallInput" placeholder="例）サトウ"></textarea>
+  <div class="row">
+    <input type="submit" value="送信">
+    <button type="button" id="clearBtn" class="secondary">クリア</button>
+  </div>
+</form>
+
+<!-- 試行結果（語彙） -->
+<div id="results" class="hidden">
+  <h2 id="roundTitle"></h2>
+  <table>
+    <thead id="resultHead"><tr><th style="text-align:left;">あなたの入力</th><th>判定</th></tr></thead>
+    <tbody id="resultBody"></tbody>
+  </table>
+  <p id="summary"></p>
+  <div class="row">
+    <button id="nextBtn">次の試行へ</button>
+    <button id="endBtn" class="secondary hidden">終了（まとめを見る）</button>
+  </div>
+</div>
+
+<!-- 最終まとめ（表示は 15行×10列のまま） -->
+<div id="final" class="hidden">
+  <h2>最終まとめ（15行 × 10列）</h2>
+  <p class="note">行＝呈示順（1〜15）、列＝試行（1〜10）。セルのツールチップに呈示語。</p>
+  <div style="overflow:auto;border:1px solid var(--border);border-radius:10px;">
+    <table id="finalTable" style="min-width:700px;">
+      <thead>
+        <tr>
+          <th class="pos">位置</th>
+          <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
+          <th>6</th><th>7</th><th>8</th><th>9</th><th>10</th>
+        </tr>
+      </thead>
+      <tbody id="finalBody"></tbody>
+    </table>
+  </div>
+  <div class="row" style="margin-top:14px;">
+    <!-- 自動送信のため非表示だがハンドラは残す -->
+    <button id="sendBtn" class="hidden">Googleフォームへ送信</button>
+    <button id="restartBtn" class="secondary">最初からやり直す</button>
+  </div>
+</div>
+
+<script>
+/* ============ Googleフォーム設定（転置送信：行=10、列=15） ============ */
+const FORM_ID = "1FAIpQLScxm4K4NrDKIbxN5B63Z25un9QMwHmL1O9FjJXHpush9iOVnw";
+const FORM_ACTION = `https://docs.google.com/forms/d/e/${FORM_ID}/formResponse`;
+
+/* 行ごとの entry ID（10行＝試行1〜10の順） */
+const ROW_ENTRY_IDS = [
+  "255632040",  // 試行1
+  "1676117472", // 試行2
+  "745150064",  // 試行3
+  "1589191550", // 試行4
+  "843303986",  // 試行5
+  "1440199427", // 試行6
+  "666951513",  // 試行7
+  "542118536",  // 試行8
+  "480350887",  // 試行9
+  "2113854404"  // 試行10
+];
+
+/* 列ラベル（フォームの列名と一致：1〜15） */
+const COLUMN_LABELS = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15"];
+
+/* ============ 課題本体（表示は 15行×10列） ============ */
+const MASTER_WORDS = [
+"アイス","アニメ","アロマ","イカ","イヌ","インク","ウタ","ウシ","ウメ","エビ","エンピツ","エプロン","オニ","オルガン","オンガク",
+"カメ","カバ","カモ","キノコ","キカイ","キツネ","クマ","クモ","クルマ","ケムリ","ケイト","ケーキ","コアラ","コトバ","コップ",
+"サル","サクラ","サカナ","シカ","シロ","シンブン","スミ","スズ","スープ","セカイ","セミ","セメント","ソラ","ソバ","ソックス",
+"タネ","タコ","タヌキ","チズ","チカラ","チョコ","ツリ","ツミキ","ツバメ","テガミ","テーブル","テープ","トリ","トマト","トケイ",
+"ナス","ナミ","ナゾ","ニンジン","ニュース","ニッカ","ヌマ","ヌイグルミ","ヌードル","ネコ","ネズミ","ネオン","ノリ","ノコギリ","ノート",
+"ハナ","ハコ","ハート","ヒカリ","ヒト","ヒモ","フネ","フク","フクロ","ヘビ","ヘンジ","ヘソ","ホシ","ホネ","ホット","マメ","マチ","マスク",
+"ミカン","ミズ","ミツバチ","ムシ","ムネ","ムラ","メガネ","メモ","メロン","モリ","モノ","モップ","ヤマ","ヤギ","ヤネ","ユキ","ユメ","ユビ",
+"ヨル","ヨット","ヨウジ","ラジオ","ラーメン","ラベル","リボン","リス","リーダー","ルーペ","ルート","ルビー","レモン","レンズ","レコード",
+"ロボ","ロープ","ロマン","ワニ","ワラ","ワープ","アルバム","イモ","エリア","オモチャ","カーテン","キップ","クツ","ケシゴム","コイン","サボテン",
+"スキー","セーター","ソファ","タイム","チェス","ツメ","テニス","トランプ","ナベ","ノック","ハブラシ","ヒゲ","フォーク","ベルト","メダル","ラップ"
+];
+
+const TRIALS = 10;            // 可視テーブルの列数（試行）
+const WORDS_PER_TRIAL = 15;   // 可視テーブルの行数（位置）
+const SHOW_MS = 1000;
+
+/* 暗算課題（偶数試行のみ実施） */
+const DISTRACTOR_COUNT = 10;   // 提示数
+const DISTRACTOR_MIN = 1;      // 1〜9
+const DISTRACTOR_MAX = 9;
+const DISTRACTOR_SHOW_MS = 3000; // 各3秒
+
+let trialIndex = 0, shuffled = [], currentWords = [], timer = null;
+const wordsMatrix  = Array.from({length: WORDS_PER_TRIAL}, ()=> Array(TRIALS).fill(null)); // [位置][試行]
+const recallMatrix = Array.from({length: WORDS_PER_TRIAL}, ()=> Array(TRIALS).fill(null)); // [位置][試行]
+let sentOnce = false;
+
+/* 暗算記録（必要なら後で送信や保存に利用可） */
+const arithRecords = Array(TRIALS).fill(null);
+
+/* Utils */
+function shuffle(a){const arr=[...a];for(let i=arr.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
+function splitAnswers(raw){return (raw||"").normalize("NFKC").split(/[\n,，、・／\/\t ]+/).map(s=>s.trim()).filter(Boolean);}
+function toPhase(p){
+  document.getElementById('startScreen').classList.toggle('hidden', p!=='start');
+  document.getElementById('stage').classList.toggle('hidden', p!=='present');
+  document.getElementById('blank').classList.toggle('hidden', p!=='blank');   /* 追加 */
+  document.getElementById('arith').classList.toggle('hidden', p!=='arith');
+  document.getElementById('inputWrap').classList.toggle('hidden', p!=='input');
+  document.getElementById('results').classList.toggle('hidden', p!=='results');
+  document.getElementById('final').classList.toggle('hidden', p!=='final');
+}
+function sleep(ms){ return new Promise(r=>{ timer=setTimeout(r, ms); }); }
+function randIntInclusive(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+
+/* 追加: 奇数試行の無表示30秒 */
+async function runBlankDelay(){
+  toPhase('blank');
+  await sleep(30000);
+}
+
+/* 暗算課題（偶数試行のみに実施・指示文なし） */
+async function runArithmeticTask(){
+  toPhase('arith');
+  const numEl = document.getElementById('arithNum');
+  const form = document.getElementById('arithForm');
+  const answerInput = document.getElementById('arithAnswer');
+  const feedback = document.getElementById('arithFeedback');
+
+  form.classList.add('hidden');
+  feedback.textContent = '';
+  answerInput.value = '';
+
+  // 1〜9の整数を10個生成
+  const seq = Array.from({length: DISTRACTOR_COUNT}, () => randIntInclusive(DISTRACTOR_MIN, DISTRACTOR_MAX));
+  const targetSum = seq.reduce((a,b)=>a+b,0);
+
+  // 各3秒ずつ呈示
+  for(let i=0;i<seq.length;i++){
+    numEl.textContent = String(seq[i]);
+    await sleep(DISTRACTOR_SHOW_MS);
+  }
+
+  // 入力フェーズ
+  numEl.textContent = '合計は？';
+  form.classList.remove('hidden');
+  answerInput.focus();
+
+  // 回答を待つ
+  await new Promise(resolve=>{
+    form.onsubmit = (e)=>{
+      e.preventDefault();
+      const userVal = parseInt(answerInput.value, 10);
+      const ok = (userVal === targetSum);
+      feedback.textContent = ok ? '正解です。' : `不正解（正解：${targetSum}）`;
+      feedback.className = ok ? 'ok' : 'ng';
+      arithRecords[trialIndex] = { seq, targetSum, userVal, ok };
+      resolve();
+    };
+  });
+
+  // 少し待って語彙入力へ
+  await sleep(900);
+}
+
+/* 呈示（単語間に＋1秒 → 単語1秒）＋偶数/奇数の分岐を追加 */
+async function present(words){
+  toPhase('present');
+  const el = document.getElementById('word');
+  for(let i=0;i<words.length;i++){
+    // ＋を1秒
+    el.textContent = '+';
+    await sleep(1000);
+
+    // 単語を1秒
+    el.textContent = words[i];
+    wordsMatrix[i][trialIndex] = words[i]; // [位置][試行]
+    await sleep(SHOW_MS);
+  }
+
+  // 1始まりでの試行番号
+  const trialNo = trialIndex + 1;
+
+  if(trialNo % 2 === 0){
+    // 偶数試行：暗算課題
+    await runArithmeticTask();
+  }else{
+    // 奇数試行：無表示30秒
+    await runBlankDelay();
+  }
+
+  // 語彙入力へ
+  toPhase('input');
+  document.getElementById('recallInput').focus();
+}
+
+/* 語彙判定 */
+function evaluate(ans, words){ const uniq=[...new Set(ans)]; return uniq.map(a=>({input:a, ok: words.includes(a)})); }
+
+/* 試行結果表示（語彙） */
+function showResults(rows){
+  toPhase('results');
+  const body = document.getElementById('resultBody');
+  const title = document.getElementById('roundTitle');
+  const summary = document.getElementById('summary');
+  body.innerHTML = '';
+  title.textContent = `試行 ${trialIndex+1} の結果`;
+
+  const inputSet = new Set(rows.map(r=>r.input));
+  let correct = 0;
+
+  for(let pos=0; pos<currentWords.length; pos++){
+    const ok = inputSet.has(currentWords[pos]);
+    recallMatrix[pos][trialIndex] = ok; // [位置][試行]
+  }
+
+  for(const r of rows){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td style="text-align:left;">${r.input}</td>
+                    <td>${r.ok?'<span class="ok">○</span>':'<span class="ng">×</span>'}</td>`;
+    if(r.ok) correct++;
+    body.appendChild(tr);
+  }
+  summary.textContent = `呈示語に一致：${correct} / ${rows.length}`;
+
+  document.getElementById('nextBtn').classList.toggle('hidden', trialIndex >= TRIALS-1);
+  document.getElementById('endBtn').classList.toggle('hidden', trialIndex < TRIALS-1);
+}
+
+/* 最終まとめ（可視 15×10） */
+function renderFinalGrid(){
+  const tbody = document.getElementById('finalBody');
+  tbody.innerHTML = '';
+  for(let pos=0; pos<WORDS_PER_TRIAL; pos++){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<th class="pos">${pos+1}</th>`;
+    for(let t=0; t<TRIALS; t++){
+      const w  = wordsMatrix[pos][t];
+      const ok = recallMatrix[pos][t];
+      const cell = ok===true ? '<span class="cell-ok">○</span>'
+                 : ok===false ? '<span class="cell-ng">×</span>'
+                               : '<span class="cell-na">–</span>';
+      const td = document.createElement('td');
+      if(w) td.title = w;
+      td.innerHTML = cell;
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+}
+
+/* ===== 送信（転置：行=試行1..10、列=位置1..15） ===== */
+function buildPayloadTransposed(){
+  const payload = new URLSearchParams();
+  // 行 = 試行 t（0..9）、列 = 位置 pos（0..14）
+  for(let t=0; t<TRIALS; t++){
+    const entry = `entry.${ROW_ENTRY_IDS[t]}`; // 各試行に対応する行ID
+    for(let pos=0; pos<WORDS_PER_TRIAL; pos++){
+      if(recallMatrix[pos][t] === true){
+        payload.append(entry, COLUMN_LABELS[pos]); // 列ラベルは1..15
+      }
+    }
+  }
+  return payload;
+}
+
+async function sendToGoogleFormGrid(){
+  if(sentOnce) return;  // 二重送信防止
+  sentOnce = true;
+
+  // 整合性チェック
+  if(ROW_ENTRY_IDS.length !== TRIALS) return;            // 10行必要
+  if(COLUMN_LABELS.length !== WORDS_PER_TRIAL) return;   // 15列必要
+
+  const payload = buildPayloadTransposed();
+  try{
+    await fetch(FORM_ACTION, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: payload.toString()
+    });
+  }catch(e){
+    console.error("Google Form submit error:", e);
+  }
+}
+
+/* イベント */
+document.getElementById('startBtn').addEventListener('click', () => {
+  trialIndex = 0;
+  sentOnce = false; // 再スタート時にリセット
+  for(let i=0;i<WORDS_PER_TRIAL;i++){ wordsMatrix[i].fill(null); recallMatrix[i].fill(null); }
+  shuffled = shuffle(MASTER_WORDS);                         // 150語を一度だけシャッフル
+  currentWords = shuffled.slice(0, WORDS_PER_TRIAL);        // 最初の15語
+  document.getElementById('startScreen').classList.add('hidden');
+  present(currentWords);
+});
+
+document.getElementById('inputWrap').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const ans = splitAnswers(document.getElementById('recallInput').value);
+  const rows = evaluate(ans, currentWords);
+  showResults(rows);
+});
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  document.getElementById('recallInput').value = '';
+  document.getElementById('recallInput').focus();
+});
+
+document.getElementById('nextBtn').addEventListener('click', () => {
+  trialIndex++;
+  const start = trialIndex * WORDS_PER_TRIAL;
+  const end   = start + WORDS_PER_TRIAL;
+  currentWords = shuffled.slice(start, end);
+  document.getElementById('recallInput').value = '';
+  present(currentWords);
+});
+
+document.getElementById('endBtn').addEventListener('click', () => {
+  renderFinalGrid();              // 可視の 15×10 表示
+  toPhase('final');
+  window.scrollTo({top:0, behavior:'smooth'});
+  sendToGoogleFormGrid();         // 自動で1回だけ転置送信
+});
+
+// 非表示だが念のためハンドラは維持
+document.getElementById('sendBtn').addEventListener('click', sendToGoogleFormGrid);
+document.getElementById('restartBtn').addEventListener('click', () => location.reload());
+
+// 初期
+toPhase('start');
+</script>
+</body>
+</html>
