@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>自由再生課題</title>
+<title>語彙記憶課題（Googleフォーム：グリッド転置送信）</title>
 <style>
   :root { --bg:#0b0f14; --fg:#e8f0fe; --muted:#9fb3c8; --accent:#6aa9ff;
           --ok:#0fd47c; --ng:#ff6b6b; --card:#0e1621; --border:#1f3248; }
@@ -13,7 +13,7 @@
   .hidden{display:none!important;}
   #stage{display:flex;height:100vh;width:100vw;align-items:center;justify-content:center;}
   #word{font-size:clamp(44px,10vw,110px);font-weight:800;}
-  /* 追加: 無表示スクリーン（背景だけ） */
+  /* 無表示スクリーン（奇数試行） */
   #blank{display:flex;height:100vh;width:100vw;}
   #arith{display:flex;height:100vh;width:100vw;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
   #arithNum{font-size:clamp(44px,10vw,110px);font-weight:800;}
@@ -57,7 +57,7 @@
   <div id="word" role="heading" aria-level="1"></div>
 </div>
 
-<!-- 追加: 無表示スクリーン（奇数試行で30秒） -->
+<!-- 無表示スクリーン（奇数試行で30秒） -->
 <div id="blank" class="hidden" aria-hidden="true"></div>
 
 <!-- 暗算課題（偶数試行差し込み、指示文なし） -->
@@ -161,7 +161,8 @@ const SHOW_MS = 1000;
 const DISTRACTOR_COUNT = 10;   // 提示数
 const DISTRACTOR_MIN = 1;      // 1〜9
 const DISTRACTOR_MAX = 9;
-const DISTRACTOR_SHOW_MS = 3000; // 各3秒
+/* 既存の変数は残す（最小変更方針） */ 
+const DISTRACTOR_SHOW_MS = 3000; // 各3秒（今回は未使用）
 
 let trialIndex = 0, shuffled = [], currentWords = [], timer = null;
 const wordsMatrix  = Array.from({length: WORDS_PER_TRIAL}, ()=> Array(TRIALS).fill(null)); // [位置][試行]
@@ -177,7 +178,7 @@ function splitAnswers(raw){return (raw||"").normalize("NFKC").split(/[\n,，、�
 function toPhase(p){
   document.getElementById('startScreen').classList.toggle('hidden', p!=='start');
   document.getElementById('stage').classList.toggle('hidden', p!=='present');
-  document.getElementById('blank').classList.toggle('hidden', p!=='blank');   /* 追加 */
+  document.getElementById('blank').classList.toggle('hidden', p!=='blank');   /* 奇数試行用 */
   document.getElementById('arith').classList.toggle('hidden', p!=='arith');
   document.getElementById('inputWrap').classList.toggle('hidden', p!=='input');
   document.getElementById('results').classList.toggle('hidden', p!=='results');
@@ -186,13 +187,13 @@ function toPhase(p){
 function sleep(ms){ return new Promise(r=>{ timer=setTimeout(r, ms); }); }
 function randIntInclusive(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
 
-/* 追加: 奇数試行の無表示30秒 */
+/* 奇数試行の無表示30秒 */
 async function runBlankDelay(){
   toPhase('blank');
   await sleep(30000);
 }
 
-/* 暗算課題（偶数試行のみに実施・指示文なし） */
+/* 暗算課題（偶数試行のみ・数字前に＋1秒→数字2秒） */
 async function runArithmeticTask(){
   toPhase('arith');
   const numEl = document.getElementById('arithNum');
@@ -208,10 +209,12 @@ async function runArithmeticTask(){
   const seq = Array.from({length: DISTRACTOR_COUNT}, () => randIntInclusive(DISTRACTOR_MIN, DISTRACTOR_MAX));
   const targetSum = seq.reduce((a,b)=>a+b,0);
 
-  // 各3秒ずつ呈示
+  // ★ 変更点：各数字の前に＋を1秒、その後数字を2秒呈示
   for(let i=0;i<seq.length;i++){
-    numEl.textContent = String(seq[i]);
-    await sleep(DISTRACTOR_SHOW_MS);
+    numEl.textContent = '+';           // 注視点 1秒
+    await sleep(1000);
+    numEl.textContent = String(seq[i]); // 数字 2秒
+    await sleep(2000);
   }
 
   // 入力フェーズ
@@ -236,7 +239,7 @@ async function runArithmeticTask(){
   await sleep(900);
 }
 
-/* 呈示（単語間に＋1秒 → 単語1秒）＋偶数/奇数の分岐を追加 */
+/* 呈示（単語間に＋1秒 → 単語1秒）＋偶数/奇数の分岐 */
 async function present(words){
   toPhase('present');
   const el = document.getElementById('word');
@@ -406,4 +409,3 @@ toPhase('start');
 </script>
 </body>
 </html>
-
