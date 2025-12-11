@@ -1,327 +1,355 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ストループ課題</title>
-  <style>
-    :root {
-      --bg:#000000;      /* 純粋な黒 */
-      --fg:#e8f0fe;
-      --muted:#9fb3c8;
-      --accent:#6aa9ff;
-      --card:#0e1621;
-      --border:#1f3248;
-    }
-    html,body{
-      margin:0;
-      background:var(--bg);
-      color:var(--fg);
-      font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
-    }
-    .center{min-height:100vh;display:grid;place-items:center;}
-    .hidden{display:none!important;}
-    #stage{
-      display:flex; height:100vh; width:100vw;
-      align-items:center; justify-content:center;
-    }
-    #word{ font-size:clamp(56px,12vw,140px); font-weight:800; }
-    #startScreen h1{ font-size:2.8rem; margin-bottom:16px; }
-    #startScreen .note{ font-size:1.3rem; line-height:1.7; }
-    #startScreen .big-start-hint{
-      font-size:2.6rem;
-      display:block;
-      margin-top:24px;
-    }
-    #copyTableBtn{
-      background:var(--accent); color:#041423; border:none;
-      border-radius:12px; font-weight:700; cursor:pointer;
-      padding:8px 16px; font-size:14px; margin-right:8px;
-    }
-    #summaryScreen{ max-width:900px; margin:30px auto; padding:20px; }
-    .note{color:var(--muted);font-size:14px;}
-    #resultTable{
-      width:100%; border-collapse:collapse; margin-top:10px; font-size:14px;
-    }
-    #resultTable th,#resultTable td{
-      border:1px solid var(--border); padding:4px 6px; text-align:center;
-    }
-    #resultTable th{ background:var(--card); }
-  </style>
+<meta charset="UTF-8">
+<title>心的回転</title>
+<style>
+  body {
+    font-family: sans-serif;
+    text-align: center;
+  }
+  .pair-container {
+    display: none; /* 最初は非表示 */
+    justify-content: center;
+    align-items: center;
+    margin-top: 120px;
+  }
+  .img-box {
+    width: 300px;
+    height: 300px;
+    margin: 0 80px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #fff;
+  }
+  .img-box img {
+    max-width: 95%;
+    max-height: 95%;
+    transform-origin: center center;
+  }
+
+  #instruction-screen,
+  #break-screen,
+  #fixation,
+  #feedback,
+  #end-message {
+    margin-top: 180px;
+    font-size: 32px;
+    line-height: 1.8;
+  }
+
+  #fixation {
+    font-size: 72px;
+  }
+  #feedback {
+    font-size: 80px;
+  }
+
+  #end-message {
+    display: none;
+  }
+
+  #result-section {
+    display: none;
+    margin-top: 50px;
+  }
+  table {
+    width: 80%;
+    margin: 0 auto;
+    border-collapse: collapse;
+  }
+  table, th, td {
+    border: 1px solid #666;
+  }
+  th, td {
+    padding: 8px;
+  }
+  #copy-btn {
+    margin-bottom: 20px;
+    padding: 10px 20px;
+    font-size: 18px;
+  }
+</style>
 </head>
+
 <body>
 
-  <!-- 開始画面 -->
-  <div id="startScreen" class="center">
-    <div style="text-align:center;">
-      <h1>ストループ課題</h1>
-      <p class="note">
-        ●・ひらがな・漢字・カタカナがランダムに呈示されます<br>
-        赤色：j，緑色：fキーをできる限り素早く，正確に押してください<br>
-        <b class="big-start-hint">スペースキーを押すと課題が始まります</b>
-      </p>
-    </div>
-  </div>
+<!-- 開始画面 -->
+<div id="instruction-screen">
+  左右に二枚呈示される画像が一致していれば“j”，<br>
+  鏡像であれば“f”を，出来る限り早く正確に押してください。<br><br>
+  なお，左の画像は常に成立していますが，<br>
+  右の画像は角度が変わります。<br><br>
+  準備ができたら，“f”または“j”のキーを押して始めてください。<br><br>
+  ※画像は Nishimoto et al., 2014
+</div>
 
-  <!-- 休憩画面 -->
-  <div id="breakScreen" class="center hidden">
-    <div style="text-align:center;">
-      <h1>休憩</h1>
-      <p class="note">
-        一息ついてください<br>
-        <b>スペースキーで次のブロックへ</b>
-      </p>
-    </div>
-  </div>
+<!-- 休憩画面 -->
+<div id="break-screen" style="display:none;">
+  休憩してください。<br><br>
+  十分に休憩できたら，“f”または“j”のキーを押して始めてください。
+</div>
 
-  <!-- 刺激画面 -->
-  <div id="stage" class="hidden">
-    <div id="word">+</div>
-  </div>
+<!-- 固視点（＋） -->
+<div id="fixation" style="display:none;">
+  ＋
+</div>
 
-  <!-- 結果画面 -->
-  <div id="summaryScreen" class="hidden">
-    <h2>課題終了</h2>
-    <button id="copyTableBtn">表をコピー</button>
-
-    <table id="resultTable">
-      <thead>
-        <tr>
-          <th>試行数</th>
-          <th>刺激種類</th>
-          <th>色</th>
-          <th>押したキー</th>
-          <th>正誤</th>
-          <th>一致/不一致</th>
-          <th>反応時間（秒）</th>
-        </tr>
-      </thead>
-      <tbody id="resultTableBody"></tbody>
-    </table>
+<!-- 刺激呈示 -->
+<div class="pair-container" id="pair">
+  <div class="img-box">
+    <img id="left-img" src="" alt="left">
   </div>
+  <div class="img-box">
+    <img id="right-img" src="" alt="right">
+  </div>
+</div>
+
+<!-- フィードバック（〇／×） -->
+<div id="feedback" style="display:none;"></div>
+
+<div id="end-message">すべての刺激の呈示が終了しました。</div>
+
+<!-- 結果表示セクション -->
+<div id="result-section">
+  <button id="copy-btn">結果をコピー</button>
+  <table id="result-table">
+    <thead>
+      <tr>
+        <th>試行</th>
+        <th>反転</th>
+        <th>角度</th>
+        <th>正誤</th>
+        <th>反応時間(ms)</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
 
 <script>
-const WORD_FORMS = {
-  aka:{ meaning:"あか", hiragana:"あか", kanji:"赤", katakana:"アカ" },
-  midori:{ meaning:"みどり", hiragana:"みどり", kanji:"緑", katakana:"ミドリ" }
-};
-const SCRIPTS=["hiragana","kanji","katakana"];
-const BLOCK_TYPES=["dot","hiragana","katakana","kanji"];
+// ------------------ 刺激リスト作成 ------------------
+const files = [];
+for (let i = 1; i <= 360; i++) {
+  files.push(String(i).padStart(3, "0") + ".png");
+}
 
-function shuffle(a){
-  const arr=[...a];
-  for(let i=arr.length-1;i>0;i--){
-    const j=Math.floor(Math.random()*(i+1));
-    [arr[i],arr[j]]=[arr[j],arr[i]];
+// 角度（各45回ずつ = 360 試行）
+const angleLevels = [45, 90, 135, 180, 225, 270, 315, 360];
+const angles = [];
+angleLevels.forEach(a => {
+  for (let i = 0; i < 45; i++) angles.push(a);
+});
+
+// シャッフル関数
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
   }
-  return arr;
-}
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-
-function scriptToLabel(s){
-  if(s==="dot") return "●";
-  if(s==="hiragana") return "ひらがな";
-  if(s==="kanji") return "漢字";
-  if(s==="katakana") return "カタカナ";
-  return "";
 }
 
-function buildBlockTrials(blockType){
-  const block=[];
-  if(blockType==="dot"){
-    for(let i=0;i<20;i++)
-      block.push({text:"●",script:"dot",meaning:"あか",meaningCode:"aka",ink:"red",congruent:true});
-    for(let i=0;i<20;i++)
-      block.push({text:"●",script:"dot",meaning:"みどり",meaningCode:"midori",ink:"green",congruent:true});
-    return shuffle(block);
+// 右画像が非反転になる試行を 180 個作成
+let rightIsNormal = new Array(360).fill(false);
+let indices = [...Array(360).keys()];
+shuffle(indices);
+for (let i = 0; i < 180; i++) rightIsNormal[indices[i]] = true;
+
+// 試行リスト作成
+let trials = [];
+for (let i = 0; i < 360; i++) {
+  trials.push({
+    file: files[i],
+    angle: angles[i],
+    rightNormal: rightIsNormal[i]  // 右が非反転なら true
+  });
+}
+
+// 試行順をシャッフル
+shuffle(trials);
+
+// ------------------ 状態管理 ------------------
+let currentIndex = 0;
+let trialStartTime = performance.now();
+let results = [];
+let phase = "instruction";  // instruction / fixation / stimulus / feedback / break / finished
+let fixationTimeoutId = null;
+
+// 刺激（画像）を読み込む：テキストは出さない
+function showCurrentPair() {
+  const trial = trials[currentIndex];
+  const leftImg = document.getElementById("left-img");
+  const rightImg = document.getElementById("right-img");
+
+  // 左：常に非反転・無回転
+  leftImg.src = "Nishimoto_2012/" + trial.file;
+  leftImg.style.transform = "rotate(0deg)";
+
+  // 右：非反転 or 反転フォルダ
+  rightImg.src = trial.rightNormal
+    ? "Nishimoto_2012/" + trial.file
+    : "Nishimoto_2012_flipped/" + trial.file;
+
+  // 右画像のみ回転
+  rightImg.style.transform = "rotate(" + trial.angle + "deg)";
+}
+
+// 固視点表示 → 1〜2 秒後に刺激へ
+function startFixation() {
+  if (currentIndex >= trials.length) {
+    finishExperiment();
+    return;
   }
+  phase = "fixation";
 
-  const script = blockType;
+  document.getElementById("instruction-screen").style.display = "none";
+  document.getElementById("break-screen").style.display = "none";
+  document.getElementById("pair").style.display = "none";
+  document.getElementById("feedback").style.display = "none";
 
-  for(let i=0;i<20;i++)
-    block.push({text:WORD_FORMS.aka[script],script,meaning:"あか",meaningCode:"aka",ink:"red",congruent:true});
+  const fixation = document.getElementById("fixation");
+  fixation.style.display = "block";
 
-  for(let i=0;i<20;i++)
-    block.push({text:WORD_FORMS.aka[script],script,meaning:"あか",meaningCode:"aka",ink:"green",congruent:false});
-
-  for(let i=0;i<20;i++)
-    block.push({text:WORD_FORMS.midori[script],script,meaning:"みどり",meaningCode:"midori",ink:"green",congruent:true});
-
-  for(let i=0;i<20;i++)
-    block.push({text:WORD_FORMS.midori[script],script,meaning:"みどり",meaningCode:"midori",ink:"red",congruent:false});
-
-  return shuffle(block);
-}
-
-const startScreen=document.getElementById("startScreen");
-const breakScreen=document.getElementById("breakScreen");
-const stage=document.getElementById("stage");
-const wordEl=document.getElementById("word");
-const summaryScreen=document.getElementById("summaryScreen");
-const resultTableBody=document.getElementById("resultTableBody");
-const copyTableBtn=document.getElementById("copyTableBtn");
-
-let trials=[], trialIndex=0, awaitingResponse=false;
-let trialOnsetTime=0, results=[];
-let blockOrder=[], currentBlockIndex=0;
-
-function showStart(){
-  startScreen.classList.remove("hidden");
-  breakScreen.classList.add("hidden");
-  stage.classList.add("hidden");
-  summaryScreen.classList.add("hidden");
-}
-function showStage(){
-  startScreen.classList.add("hidden");
-  breakScreen.classList.add("hidden");
-  summaryScreen.classList.add("hidden");
-  stage.classList.remove("hidden");
-}
-function showBreak(){
-  startScreen.classList.add("hidden");
-  stage.classList.add("hidden");
-  summaryScreen.classList.add("hidden");
-  breakScreen.classList.remove("hidden");
-}
-function showSummary(){
-  startScreen.classList.add("hidden");
-  stage.classList.add("hidden");
-  breakScreen.classList.add("hidden");
-  summaryScreen.classList.remove("hidden");
-}
-
-async function runTrial(){
-  if(trialIndex>=trials.length){
-    if(currentBlockIndex < blockOrder.length - 1){
-      currentBlockIndex++;
-      showBreak();
-    }else{
-      endExperiment();
+  const duration = 1000 + Math.random() * 1000; // 1〜2秒
+  fixationTimeoutId = setTimeout(() => {
+    if (phase === "fixation") {
+      showStimulus();
     }
+  }, duration);
+}
+
+// 刺激呈示フェーズ
+function showStimulus() {
+  if (currentIndex >= trials.length) {
+    finishExperiment();
+    return;
+  }
+  phase = "stimulus";
+
+  document.getElementById("fixation").style.display = "none";
+  document.getElementById("feedback").style.display = "none";
+
+  showCurrentPair();
+  const pairDiv = document.getElementById("pair");
+  pairDiv.style.display = "flex";
+
+  trialStartTime = performance.now();
+}
+
+// フィードバック（〇／×）
+function showFeedback(isCorrect) {
+  phase = "feedback";
+
+  document.getElementById("pair").style.display = "none";
+  const fb = document.getElementById("feedback");
+  fb.textContent = isCorrect ? "〇" : "×";
+  fb.style.display = "block";
+
+  setTimeout(() => {
+    currentIndex++;
+    // 120 試行ごとに休憩（ただし最終試行後は除く）
+    if (currentIndex < trials.length && currentIndex % 120 === 0) {
+      showBreak();
+    } else {
+      startFixation();
+    }
+  }, 1000); // 1秒間表示
+}
+
+// 休憩画面
+function showBreak() {
+  phase = "break";
+
+  document.getElementById("feedback").style.display = "none";
+  document.getElementById("fixation").style.display = "none";
+  document.getElementById("pair").style.display = "none";
+
+  document.getElementById("break-screen").style.display = "block";
+}
+
+// 実験終了・結果表示
+function finishExperiment() {
+  phase = "finished";
+
+  document.getElementById("fixation").style.display = "none";
+  document.getElementById("pair").style.display = "none";
+  document.getElementById("feedback").style.display = "none";
+  document.getElementById("break-screen").style.display = "none";
+  document.getElementById("instruction-screen").style.display = "none";
+
+  document.getElementById("end-message").style.display = "block";
+  document.getElementById("result-section").style.display = "block";
+
+  const tbody = document.querySelector("#result-table tbody");
+
+  results.forEach(r => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${r.trial}</td>
+      <td>${r.inversion}</td>
+      <td>${r.angle}</td>
+      <td>${r.accuracy}</td>
+      <td>${r.rt}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+// ------------------ キー入力 ------------------
+document.addEventListener("keydown", function(e) {
+  const key = e.key.toLowerCase();
+  if (key !== "j" && key !== "f") return;
+
+  if (phase === "instruction") {
+    // 開始画面から実験開始
+    startFixation();
     return;
   }
 
-  const trial=trials[trialIndex];
-  showStage();
-  awaitingResponse=false;
+  if (phase === "break") {
+    // 休憩画面から再開
+    startFixation();
+    return;
+  }
 
-  const fixation = 1000 + Math.random()*1000;
-  wordEl.textContent="+";
-  wordEl.style.color="#e8f0fe";
-  await sleep(fixation);
+  if (phase === "stimulus") {
+    // 反応を記録
+    const rt = performance.now() - trialStartTime;
+    const trial = trials[currentIndex];
 
-  wordEl.textContent=trial.text;
-  wordEl.style.color=trial.ink;
+    const inversion = trial.rightNormal ? "無し" : "有り";
+    const correctKey = trial.rightNormal ? "j" : "f";
+    const accuracy = key === correctKey ? "正" : "誤";
 
-  awaitingResponse=true;
-  trialOnsetTime=performance.now();
-}
-
-async function handleResponse(key){
-  if(!awaitingResponse) return;
-
-  const now=performance.now();
-  const rt=now - trialOnsetTime;
-  const trial=trials[trialIndex];
-
-  // 色に基づく正解判定：緑→f, 赤→j
-  const correctKey = trial.ink === "green" ? "f" : "j";
-  const correct = (key === correctKey);
-  const congLabel = trial.congruent ? "一致" : "不一致";
-
-  results.push({
-    trial:results.length+1,
-    text:trial.text,
-    script:trial.script,
-    ink:trial.ink,
-    responseKey:key,
-    correct,
-    congruent:congLabel,
-    rt:rt
-  });
-
-  awaitingResponse=false;
-
-  // フィードバック：白の○×を1秒
-  wordEl.style.color = "#ffffff";
-  wordEl.textContent = correct ? "○" : "×";
-  await sleep(1000);
-
-  trialIndex++;
-  runTrial();
-}
-
-function endExperiment(){
-  showSummary();
-  resultTableBody.innerHTML = "";
-
-  for(const r of results){
-    const stimType = scriptToLabel(r.script);
-    const colorLabel = r.ink==="red"?"赤色":"緑色";
-    const rtSec=(r.rt/1000).toFixed(4);
-
-    // ● の行だけ一致/不一致列を "―" にする
-    const congDisplay = (r.script === "dot" ? "―" : r.congruent);
-
-    const row=[ r.trial, stimType, colorLabel,
-                r.responseKey, r.correct?1:0, congDisplay, rtSec ];
-    const tr=document.createElement("tr");
-    row.forEach(v=>{
-      const td=document.createElement("td");
-      td.textContent=v;
-      tr.appendChild(td);
+    results.push({
+      trial: currentIndex + 1,
+      inversion,
+      angle: trial.angle,
+      accuracy,
+      rt: Math.round(rt)
     });
-    resultTableBody.appendChild(tr);
-  }
-}
 
-copyTableBtn.addEventListener("click",()=>{
-  const rows=document.querySelectorAll("table tr");
-  const lines=[];
-  rows.forEach(tr=>{
-    const cells=[...tr.children].map(td=>td.textContent);
-    lines.push(cells.join("\t"));
+    const isCorrect = (accuracy === "正");
+    showFeedback(isCorrect);
+    return;
+  }
+
+  // fixation / feedback / finished 中のキーは無視
+});
+
+// ------------------ 結果コピー機能 ------------------
+document.getElementById("copy-btn").addEventListener("click", function() {
+  let text = "trial\tinversion\tangle\taccuracy\trt\n";
+  results.forEach(r => {
+    text += `${r.trial}\t${r.inversion}\t${r.angle}\t${r.accuracy}\t${r.rt}\n`;
   });
-  navigator.clipboard.writeText(lines.join("\n"));
+
+  navigator.clipboard.writeText(text).then(() => {
+    alert("結果をコピーしました！");
+  });
 });
-
-function startExperiment(){
-  blockOrder = shuffle(BLOCK_TYPES);
-  currentBlockIndex=0;
-  results=[];
-  startCurrentBlock();
-}
-
-function startCurrentBlock(){
-  trials = buildBlockTrials(blockOrder[currentBlockIndex]);
-  trialIndex=0;
-  awaitingResponse=false;
-  runTrial();
-}
-
-document.addEventListener("keydown",e=>{
-  const key=e.key.toLowerCase();
-  const startVisible=!startScreen.classList.contains("hidden");
-  const breakVisible=!breakScreen.classList.contains("hidden");
-
-  if(startVisible && e.code==="Space"){
-    e.preventDefault();
-    startExperiment();
-    return;
-  }
-
-  if(breakVisible && e.code==="Space"){
-    e.preventDefault();
-    startCurrentBlock();
-    return;
-  }
-
-  if(key==="f"||key==="j"){
-    handleResponse(key);
-  }
-});
-
-showStart();
 </script>
+
 </body>
 </html>
