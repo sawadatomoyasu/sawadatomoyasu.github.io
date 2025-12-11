@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>心的回転</title>
+<title>Nishimoto Image Pair Task (Full)</title>
 <style>
   body {
     font-family: sans-serif;
@@ -135,6 +135,19 @@ for (let i = 1; i <= 360; i++) {
   files.push(String(i).padStart(3, "0") + ".png");
 }
 
+// ===== ここから事前読み込み（preload） =====
+let preloadImages = [];
+files.forEach(f => {
+  const img1 = new Image();
+  img1.src = "Nishimoto_2012/" + f;
+  preloadImages.push(img1);
+
+  const img2 = new Image();
+  img2.src = "Nishimoto_2012_flipped/" + f;
+  preloadImages.push(img2);
+});
+// ===== 事前読み込みここまで =====
+
 // 角度（各45回ずつ = 360 試行）
 const angleLevels = [45, 90, 135, 180, 225, 270, 315, 360];
 const angles = [];
@@ -174,7 +187,6 @@ let currentIndex = 0;
 let trialStartTime = performance.now();
 let results = [];
 let phase = "instruction";  // instruction / fixation / stimulus / feedback / break / finished
-let fixationTimeoutId = null;
 
 // 刺激（画像）を読み込む：テキストは出さない
 function showCurrentPair() {
@@ -212,7 +224,7 @@ function startFixation() {
   fixation.style.display = "block";
 
   const duration = 1000 + Math.random() * 1000; // 1〜2秒
-  fixationTimeoutId = setTimeout(() => {
+  setTimeout(() => {
     if (phase === "fixation") {
       showStimulus();
     }
