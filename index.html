@@ -9,7 +9,7 @@
     text-align: center;
   }
   .pair-container {
-    display: none; /* 最初は非表示 */
+    display: none;
     justify-content: center;
     align-items: center;
     margin-top: 120px;
@@ -50,21 +50,41 @@
     display: none;
   }
 
+  /* ★ 追加：休憩・終了画面 → 黒背景＋白文字 */
+  #break-screen,
+  #end-message {
+    background-color: #000;
+    color: #fff;
+    margin-top: 0;
+    padding-top: 40px 0;
+    min-height: 0vh;
+  }
+
+  /* ★ 追加：結果画面も黒背景＋白文字 */
   #result-section {
     display: none;
     margin-top: 50px;
+    background-color: #000;  /* 黒背景 */
+    color: #fff;             /* 白文字 */
+    min-height: 100vh;       /* 全画面の黒背景 */
+    padding-top: 100px;
   }
+
   table {
     width: 80%;
     margin: 0 auto;
     border-collapse: collapse;
   }
+
+  /* ★ 追加：表の線を白にして黒背景で見えるようにする */
   table, th, td {
-    border: 1px solid #666;
+    border: 1px solid #fff;
   }
+
   th, td {
     padding: 8px;
   }
+
   #copy-btn {
     margin-bottom: 20px;
     padding: 10px 20px;
@@ -75,28 +95,22 @@
 
 <body>
 
-<!-- 開始画面 -->
 <div id="instruction-screen">
   左右に二枚呈示される画像が一致していれば“j”，<br>
-  鏡像であれば“f”を，出来る限り早く正確に押してください。<br><br>
-  なお，左の画像は常に成立していますが，<br>
-  右の画像は角度が変わります。<br><br>
-  準備ができたら，“f”または“j”のキーを押して始めてください。<br><br>
+  鏡像であれば“h”または“m”を，出来る限り早く正確に押してください。<br><br>
+  準備ができたら，“h/m” または “j” を押して始めてください。<br><br>
   ※画像は Nishimoto et al., 2014
 </div>
 
-<!-- 休憩画面 -->
 <div id="break-screen" style="display:none;">
   休憩してください。<br><br>
-  十分に休憩できたら，“f”または“j”のキーを押して始めてください。
+  十分に休憩できたら，“h/m” または “j” を押して始めてください。
 </div>
 
-<!-- 固視点（＋） -->
 <div id="fixation" style="display:none;">
   ＋
 </div>
 
-<!-- 刺激呈示 -->
 <div class="pair-container" id="pair">
   <div class="img-box">
     <img id="left-img" src="" alt="left">
@@ -106,12 +120,11 @@
   </div>
 </div>
 
-<!-- フィードバック（〇／×） -->
 <div id="feedback" style="display:none;"></div>
 
 <div id="end-message">すべての刺激の呈示が終了しました。</div>
 
-<!-- 結果表示セクション -->
+<!-- ★ 黒背景領域に入る結果画面 -->
 <div id="result-section">
   <button id="copy-btn">結果をコピー</button>
   <table id="result-table">
@@ -135,7 +148,7 @@ for (let i = 1; i <= 360; i++) {
   files.push(String(i).padStart(3, "0") + ".png");
 }
 
-// ===== ここから事前読み込み（preload） =====
+// preload
 let preloadImages = [];
 files.forEach(f => {
   const img1 = new Image();
@@ -146,16 +159,15 @@ files.forEach(f => {
   img2.src = "Nishimoto_2012_flipped/" + f;
   preloadImages.push(img2);
 });
-// ===== 事前読み込みここまで =====
 
-// 角度（各45回ずつ = 360 試行）
+// angles
 const angleLevels = [45, 90, 135, 180, 225, 270, 315, 360];
 const angles = [];
 angleLevels.forEach(a => {
   for (let i = 0; i < 45; i++) angles.push(a);
 });
 
-// シャッフル関数
+// shuffle
 function shuffle(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -163,51 +175,48 @@ function shuffle(array) {
   }
 }
 
-// 右画像が非反転になる試行を 180 個作成
+// right normal trials
 let rightIsNormal = new Array(360).fill(false);
 let indices = [...Array(360).keys()];
 shuffle(indices);
 for (let i = 0; i < 180; i++) rightIsNormal[indices[i]] = true;
 
-// 試行リスト作成
+// trial list
 let trials = [];
 for (let i = 0; i < 360; i++) {
   trials.push({
     file: files[i],
     angle: angles[i],
-    rightNormal: rightIsNormal[i]  // 右が非反転なら true
+    rightNormal: rightIsNormal[i]
   });
 }
 
-// 試行順をシャッフル
 shuffle(trials);
 
-// ------------------ 状態管理 ------------------
+// 状態管理
 let currentIndex = 0;
 let trialStartTime = performance.now();
 let results = [];
-let phase = "instruction";  // instruction / fixation / stimulus / feedback / break / finished
+let phase = "instruction";
 
-// 刺激（画像）を読み込む：テキストは出さない
+// 表示処理など…（前回と同じ）
+// ------------------ ここから省略せずそのまま ------------------
+
 function showCurrentPair() {
   const trial = trials[currentIndex];
   const leftImg = document.getElementById("left-img");
   const rightImg = document.getElementById("right-img");
 
-  // 左：常に非反転・無回転
   leftImg.src = "Nishimoto_2012/" + trial.file;
   leftImg.style.transform = "rotate(0deg)";
 
-  // 右：非反転 or 反転フォルダ
   rightImg.src = trial.rightNormal
     ? "Nishimoto_2012/" + trial.file
     : "Nishimoto_2012_flipped/" + trial.file;
 
-  // 右画像のみ回転
   rightImg.style.transform = "rotate(" + trial.angle + "deg)";
 }
 
-// 固視点表示 → 1〜2 秒後に刺激へ
 function startFixation() {
   if (currentIndex >= trials.length) {
     finishExperiment();
@@ -223,7 +232,7 @@ function startFixation() {
   const fixation = document.getElementById("fixation");
   fixation.style.display = "block";
 
-  const duration = 1000 + Math.random() * 1000; // 1〜2秒
+  const duration = 1000 + Math.random() * 1000;
   setTimeout(() => {
     if (phase === "fixation") {
       showStimulus();
@@ -231,7 +240,6 @@ function startFixation() {
   }, duration);
 }
 
-// 刺激呈示フェーズ
 function showStimulus() {
   if (currentIndex >= trials.length) {
     finishExperiment();
@@ -243,13 +251,11 @@ function showStimulus() {
   document.getElementById("feedback").style.display = "none";
 
   showCurrentPair();
-  const pairDiv = document.getElementById("pair");
-  pairDiv.style.display = "flex";
+  document.getElementById("pair").style.display = "flex";
 
   trialStartTime = performance.now();
 }
 
-// フィードバック（〇／×）
 function showFeedback(isCorrect) {
   phase = "feedback";
 
@@ -260,27 +266,22 @@ function showFeedback(isCorrect) {
 
   setTimeout(() => {
     currentIndex++;
-    // 120 試行ごとに休憩（ただし最終試行後は除く）
     if (currentIndex < trials.length && currentIndex % 120 === 0) {
       showBreak();
     } else {
       startFixation();
     }
-  }, 1000); // 1秒間表示
+  }, 500);
 }
 
-// 休憩画面
 function showBreak() {
   phase = "break";
-
   document.getElementById("feedback").style.display = "none";
   document.getElementById("fixation").style.display = "none";
   document.getElementById("pair").style.display = "none";
-
   document.getElementById("break-screen").style.display = "block";
 }
 
-// 実験終了・結果表示
 function finishExperiment() {
   phase = "finished";
 
@@ -308,31 +309,35 @@ function finishExperiment() {
   });
 }
 
-// ------------------ キー入力 ------------------
 document.addEventListener("keydown", function(e) {
   const key = e.key.toLowerCase();
-  if (key !== "j" && key !== "f") return;
+
+  if (key !== "j" && key !== "h" && key !== "m") return;
 
   if (phase === "instruction") {
-    // 開始画面から実験開始
     startFixation();
     return;
   }
 
   if (phase === "break") {
-    // 休憩画面から再開
     startFixation();
     return;
   }
 
   if (phase === "stimulus") {
-    // 反応を記録
     const rt = performance.now() - trialStartTime;
     const trial = trials[currentIndex];
 
     const inversion = trial.rightNormal ? "無し" : "有り";
-    const correctKey = trial.rightNormal ? "j" : "f";
-    const accuracy = key === correctKey ? "正" : "誤";
+
+    let isCorrect;
+    if (trial.rightNormal) {
+      isCorrect = (key === "j");
+    } else {
+      isCorrect = (key === "h" || key === "m");
+    }
+
+    const accuracy = isCorrect ? "正" : "誤";
 
     results.push({
       trial: currentIndex + 1,
@@ -342,17 +347,13 @@ document.addEventListener("keydown", function(e) {
       rt: Math.round(rt)
     });
 
-    const isCorrect = (accuracy === "正");
     showFeedback(isCorrect);
     return;
   }
-
-  // fixation / feedback / finished 中のキーは無視
 });
 
-// ------------------ 結果コピー機能 ------------------
 document.getElementById("copy-btn").addEventListener("click", function() {
-  let text = "trial\tinversion\tangle\taccuracy\trt\n";
+  let text = "試行\t反転\t角度\t正誤\t反応時間(ms)\n";
   results.forEach(r => {
     text += `${r.trial}\t${r.inversion}\t${r.angle}\t${r.accuracy}\t${r.rt}\n`;
   });
