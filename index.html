@@ -2,368 +2,1432 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>心的回転</title>
+<title>心理データ解析-IAT</title>
+<link rel="stylesheet" href="image_pos.css">
+
 <style>
   body {
+    margin: 0;
     font-family: sans-serif;
+    background-color: #fafafa;
     text-align: center;
   }
-  .pair-container {
+
+  #imageContainer {
+    position: relative;
+    width: 800px;
+    height: 600px;
+    margin: 80px auto 0 auto;
+    text-align: center;
     display: none;
-    justify-content: center;
-    align-items: center;
-    margin-top: 120px;
-  }
-  .img-box {
-    width: 300px;
-    height: 300px;
-    margin: 0 80px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: #fff;
-  }
-  .img-box img {
-    max-width: 95%;
-    max-height: 95%;
-    transform-origin: center center;
+    border: none;
   }
 
-  #instruction-screen,
-  #break-screen,
-  #fixation,
-  #feedback,
-  #end-message {
-    margin-top: 180px;
-    font-size: 32px;
-    line-height: 1.8;
+  #imageContainer img,
+  #imageContainer span.plus,
+  #imageContainer span.feedback {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 100%;
+    max-height: 100%;
   }
 
-  #fixation {
-    font-size: 72px;
+  #imageContainer span.plus {
+    font-size: 64px;
+    font-weight: bold;
   }
-  #feedback {
+
+  #imageContainer span.feedback {
     font-size: 80px;
+    font-weight: bold;
+    color: red;
   }
 
-  #end-message {
+  #labels {
+    width: 800px;
+    margin: 10px auto 0 auto;
+    display: flex;
+    justify-content: space-between;
+    font-size: 60px;
+    font-weight: bold;
+    color: #333;
     display: none;
   }
 
-  /* ★ 追加：休憩・終了画面 → 黒背景＋白文字 */
-  #break-screen,
-  #end-message {
-    background-color: #000;
-    color: #fff;
-    margin-top: 0;
-    padding-top: 40px 0;
-    min-height: 0vh;
-  }
-
-  /* ★ 追加：結果画面も黒背景＋白文字 */
-  #result-section {
-    display: none;
+  #results {
     margin-top: 50px;
-    background-color: #000;  /* 黒背景 */
-    color: #fff;             /* 白文字 */
-    min-height: 100vh;       /* 全画面の黒背景 */
-    padding-top: 100px;
+    text-align: center;
+    font-size: 20px;
+    display: none;
+  }
+
+  #waitInstruction,
+  #instruction {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 30px;
+    font-weight: bold;
+    display: none;
+    text-align: center;
+    width: 1000px;
+    line-height: 1.7;
+  }
+
+  #studentScreen {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    display: block;
+    text-align: center;
+  }
+
+  #studentScreen div {
+    font-size: 32px;
+    font-weight: bold;
+    margin-bottom: 25px;
+  }
+
+  #studentIdInput {
+    font-size: 28px;
+    padding: 10px;
+    width: 300px;
+    text-align: center;
+  }
+
+  #studentStartButton {
+    display: block;
+    margin: 25px auto 0 auto;
+    font-size: 24px;
+    padding: 10px 30px;
+    cursor: pointer;
+  }
+
+  #studentError {
+    margin-top: 15px;
+    font-size: 18px;
+    color: #b00020;
+    display: none;
   }
 
   table {
-    width: 80%;
-    margin: 0 auto;
+    margin: 20px auto;
     border-collapse: collapse;
   }
 
-  /* ★ 追加：表の線を白にして黒背景で見えるようにする */
-  table, th, td {
-    border: 1px solid #fff;
-  }
-
-  th, td {
+  th,
+  td {
+    border: 1px solid #333;
     padding: 8px;
-  }
-
-  #copy-btn {
-    margin-bottom: 20px;
-    padding: 10px 20px;
-    font-size: 18px;
+    text-align: center;
   }
 </style>
 </head>
 
 <body>
 
-<div id="instruction-screen">
-  左右に二枚呈示される画像が一致していれば“j”，<br>
-  鏡像であれば“h”または“m”を，出来る限り早く正確に押してください<br><br>
-  準備ができたら，“h/m” または “j” を押して始めてください<br><br>
-  ※画像は Nishimoto et al.（2014）より使用
-</div>
+<div id="studentScreen">
 
-<div id="break-screen" style="display:none;">
-  休憩してください。<br><br>
-  十分に休憩できたら，“h/m” または “j” を押して再開してください
-</div>
+  <div>学籍番号を入力してください</div>
 
-<div id="fixation" style="display:none;">
-  ＋
-</div>
+  <input
+    type="text"
+    id="studentIdInput"
+    inputmode="numeric"
+    autocomplete="off"
+  >
 
-<div class="pair-container" id="pair">
-  <div class="img-box">
-    <img id="left-img" src="" alt="left">
+  <button id="studentStartButton">
+    開始
+  </button>
+
+  <div id="studentError">
+    学籍番号を数字で入力してください
   </div>
-  <div class="img-box">
-    <img id="right-img" src="" alt="right">
+
+</div>
+
+<div id="waitInstruction"></div>
+
+<div id="instruction"></div>
+
+<div id="experimentBlock">
+
+  <div id="imageContainer"></div>
+
+  <div id="labels">
+    <div>好き (F)</div>
+    <div>嫌い (J)</div>
   </div>
+
 </div>
 
-<div id="feedback" style="display:none;"></div>
+<div id="results"></div>
 
-<div id="end-message">すべての刺激の呈示が終了しました</div>
-
-<!-- ★ 黒背景領域に入る結果画面 -->
-<div id="result-section">
-  <button id="copy-btn">結果をコピー</button>
-  <table id="result-table">
-    <thead>
-      <tr>
-        <th>試行</th>
-        <th>反転</th>
-        <th>角度</th>
-        <th>正誤</th>
-        <th>反応時間(ms)</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-</div>
 
 <script>
-// ------------------ 刺激リスト作成 ------------------
-const files = [];
-for (let i = 1; i <= 360; i++) {
-  files.push(String(i).padStart(3, "0") + ".png");
-}
 
-// preload
-let preloadImages = [];
-files.forEach(f => {
-  const img1 = new Image();
-  img1.src = "Nishimoto_2012/" + f;
-  preloadImages.push(img1);
+// ========================================================
+// Googleフォーム設定
+// ========================================================
 
-  const img2 = new Image();
-  img2.src = "Nishimoto_2012_flipped/" + f;
-  preloadImages.push(img2);
-});
+const GOOGLE_FORM_URL =
+  "https://docs.google.com/forms/d/e/1FAIpQLSf4dK0Un44FDoxOQbFWQsPS5cqRkmRCf7185aqU3irpJehNaA/formResponse";
 
-// angles
-const angleLevels = [45, 90, 135, 180, 225, 270, 315, 360];
-const angles = [];
-angleLevels.forEach(a => {
-  for (let i = 0; i < 45; i++) angles.push(a);
-});
+let studentId = "";
 
-// shuffle
-function shuffle(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-}
+let studentIsEven = null;
 
-// right normal trials
-let rightIsNormal = new Array(360).fill(false);
-let indices = [...Array(360).keys()];
-shuffle(indices);
-for (let i = 0; i < 180; i++) rightIsNormal[indices[i]] = true;
+let formSubmitted = false;
 
-// trial list
-let trials = [];
-for (let i = 0; i < 360; i++) {
-  trials.push({
-    file: files[i],
-    angle: angles[i],
-    rightNormal: rightIsNormal[i]
+
+// ========================================================
+// 画像リスト
+// ========================================================
+
+const mainImages = [];
+
+for(let i = 1; i <= 10; i++) {
+
+  mainImages.push({
+    type: "insect",
+    file: `insects/${i}.jpg`
   });
+
 }
 
-shuffle(trials);
+for(let i = 1; i <= 10; i++) {
 
+  mainImages.push({
+    type: "flower",
+    file: `flower/${i}.jpg`
+  });
+
+}
+
+
+const practiceImages = [];
+
+for(let i = 1; i <= 5; i++) {
+
+  practiceImages.push({
+    type: "insect",
+    file: `insects_practice/${i}.jpg`
+  });
+
+}
+
+for(let i = 1; i <= 5; i++) {
+
+  practiceImages.push({
+    type: "flower",
+    file: `flower_practice/${i}.jpg`
+  });
+
+}
+
+
+// ========================================================
 // 状態管理
+// ========================================================
+
+let state = "student";
+
+let loopCount = 0;
+let maxLoops = 4;
 let currentIndex = 0;
-let trialStartTime = performance.now();
-let results = [];
-let phase = "instruction";
 
-// 表示処理など…（前回と同じ）
-// ------------------ ここから省略せずそのまま ------------------
+let loopImages = [];
+let rtList = [];
+let correctnessList = [];
 
-function showCurrentPair() {
-  const trial = trials[currentIndex];
-  const leftImg = document.getElementById("left-img");
-  const rightImg = document.getElementById("right-img");
+let allLoopRts = [];
+let allLoopImages = [];
+let allLoopCorrectness = [];
 
-  leftImg.src = "Nishimoto_2012/" + trial.file;
-  leftImg.style.transform = "rotate(0deg)";
+let startTime = 0;
 
-  rightImg.src = trial.rightNormal
-    ? "Nishimoto_2012/" + trial.file
-    : "Nishimoto_2012_flipped/" + trial.file;
 
-  rightImg.style.transform = "rotate(" + trial.angle + "deg)";
-}
+// ========================================================
+// 平均反応時間
+// ========================================================
 
-function startFixation() {
-  if (currentIndex >= trials.length) {
-    finishExperiment();
+let correctMeanRTs = {
+
+  loop2: {
+    flower: null,
+    insect: null
+  },
+
+  loop4: {
+    flower: null,
+    insect: null
+  }
+
+};
+
+
+// ========================================================
+// DOM
+// ========================================================
+
+const studentScreen =
+  document.getElementById("studentScreen");
+
+const studentIdInput =
+  document.getElementById("studentIdInput");
+
+const studentStartButton =
+  document.getElementById("studentStartButton");
+
+const studentError =
+  document.getElementById("studentError");
+
+const waitDiv =
+  document.getElementById("waitInstruction");
+
+const instructionDiv =
+  document.getElementById("instruction");
+
+const container =
+  document.getElementById("imageContainer");
+
+const labelsDiv =
+  document.getElementById("labels");
+
+const resultsDiv =
+  document.getElementById("results");
+
+
+// ========================================================
+// シャッフル
+// ========================================================
+
+const shuffle = (arr) =>
+  arr.sort(() => Math.random() - 0.5);
+
+
+// ========================================================
+// 学籍番号登録
+// ========================================================
+
+function registerStudentId() {
+
+  const value =
+    studentIdInput.value.trim();
+
+
+  if(
+    value === "" ||
+    !/^\d+$/.test(value)
+  ) {
+
+    studentError.style.display =
+      "block";
+
     return;
   }
-  phase = "fixation";
 
-  document.getElementById("instruction-screen").style.display = "none";
-  document.getElementById("break-screen").style.display = "none";
-  document.getElementById("pair").style.display = "none";
-  document.getElementById("feedback").style.display = "none";
 
-  const fixation = document.getElementById("fixation");
-  fixation.style.display = "block";
+  studentId = value;
 
-  const duration = 1000 + Math.random() * 1000;
-  setTimeout(() => {
-    if (phase === "fixation") {
-      showStimulus();
+
+  const lastDigit =
+    Number(
+      studentId.charAt(
+        studentId.length - 1
+      )
+    );
+
+
+  studentIsEven =
+    lastDigit % 2 === 0;
+
+
+  studentError.style.display =
+    "none";
+
+
+  studentScreen.style.display =
+    "none";
+
+
+  loopCount = 1;
+
+
+  startLoop(
+    loopCount
+  );
+
+}
+
+
+// ========================================================
+// 学籍番号入力
+// ========================================================
+
+studentStartButton.onclick = () => {
+
+  registerStudentId();
+
+};
+
+
+studentIdInput.addEventListener(
+  "keydown",
+  (e) => {
+
+    if(e.key === "Enter") {
+
+      e.preventDefault();
+
+      registerStudentId();
+
     }
-  }, duration);
-}
 
-function showStimulus() {
-  if (currentIndex >= trials.length) {
-    finishExperiment();
-    return;
   }
-  phase = "stimulus";
+);
 
-  document.getElementById("fixation").style.display = "none";
-  document.getElementById("feedback").style.display = "none";
 
-  showCurrentPair();
-  document.getElementById("pair").style.display = "flex";
+// ========================================================
+// F / Jキー
+// ========================================================
 
-  trialStartTime = performance.now();
-}
+document.addEventListener(
+  "keydown",
+  (e) => {
 
-function showFeedback(isCorrect) {
-  phase = "feedback";
+    const key =
+      e.key.toLowerCase();
 
-  document.getElementById("pair").style.display = "none";
-  const fb = document.getElementById("feedback");
-  fb.textContent = isCorrect ? "〇" : "×";
-  fb.style.display = "block";
 
-  setTimeout(() => {
-    currentIndex++;
-    if (currentIndex < trials.length && currentIndex % 120 === 0) {
-      showBreak();
-    } else {
-      startFixation();
-    }
-  }, 500);
-}
+    if(
+      key !== "f" &&
+      key !== "j"
+    ) {
 
-function showBreak() {
-  phase = "break";
-  document.getElementById("feedback").style.display = "none";
-  document.getElementById("fixation").style.display = "none";
-  document.getElementById("pair").style.display = "none";
-  document.getElementById("break-screen").style.display = "block";
-}
+      return;
 
-function finishExperiment() {
-  phase = "finished";
-
-  document.getElementById("fixation").style.display = "none";
-  document.getElementById("pair").style.display = "none";
-  document.getElementById("feedback").style.display = "none";
-  document.getElementById("break-screen").style.display = "none";
-  document.getElementById("instruction-screen").style.display = "none";
-
-  document.getElementById("end-message").style.display = "block";
-  document.getElementById("result-section").style.display = "block";
-
-  const tbody = document.querySelector("#result-table tbody");
-
-  results.forEach(r => {
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${r.trial}</td>
-      <td>${r.inversion}</td>
-      <td>${r.angle}</td>
-      <td>${r.accuracy}</td>
-      <td>${r.rt}</td>
-    `;
-    tbody.appendChild(row);
-  });
-}
-
-document.addEventListener("keydown", function(e) {
-  const key = e.key.toLowerCase();
-
-  if (key !== "j" && key !== "h" && key !== "m") return;
-
-  if (phase === "instruction") {
-    startFixation();
-    return;
-  }
-
-  if (phase === "break") {
-    startFixation();
-    return;
-  }
-
-  if (phase === "stimulus") {
-    const rt = performance.now() - trialStartTime;
-    const trial = trials[currentIndex];
-
-    const inversion = trial.rightNormal ? "無し" : "有り";
-
-    let isCorrect;
-    if (trial.rightNormal) {
-      isCorrect = (key === "j");
-    } else {
-      isCorrect = (key === "h" || key === "m");
     }
 
-    const accuracy = isCorrect ? "正" : "誤";
 
-    results.push({
-      trial: currentIndex + 1,
-      inversion,
-      angle: trial.angle,
-      accuracy,
-      rt: Math.round(rt)
-    });
+    e.preventDefault();
 
-    showFeedback(isCorrect);
+
+    switch(state) {
+
+      case "instruction":
+
+        instructionDiv.style.display =
+          "none";
+
+
+        showPlusBeforeImage();
+
+
+        break;
+
+
+      case "image":
+
+        const rt =
+          Date.now() - startTime;
+
+
+        const correctness =
+          checkCorrectness(
+
+            loopCount,
+
+            loopImages[
+              currentIndex - 1
+            ],
+
+            key
+
+          );
+
+
+        rtList.push(
+          rt
+        );
+
+
+        correctnessList.push(
+          correctness
+        );
+
+
+        if(
+          correctness === "×"
+        ) {
+
+          showErrorFeedback();
+
+        }
+
+        else {
+
+          showPlusBeforeImage();
+
+        }
+
+
+        break;
+
+    }
+
+  }
+);
+
+
+// ========================================================
+// 正答キー取得
+//
+// 偶数学籍番号
+// ループ1・2：虫→F、花→J
+// ループ3・4：虫→J、花→F
+//
+// 奇数学籍番号は逆
+// ========================================================
+
+function getCorrectKey(
+  loopNumber,
+  imageType
+) {
+
+  const firstHalf =
+    loopNumber === 1 ||
+    loopNumber === 2;
+
+
+  if(studentIsEven) {
+
+    if(firstHalf) {
+
+      if(imageType === "insect") {
+        return "f";
+      }
+
+      if(imageType === "flower") {
+        return "j";
+      }
+
+    }
+
+    else {
+
+      if(imageType === "insect") {
+        return "j";
+      }
+
+      if(imageType === "flower") {
+        return "f";
+      }
+
+    }
+
+  }
+
+  else {
+
+    if(firstHalf) {
+
+      if(imageType === "insect") {
+        return "j";
+      }
+
+      if(imageType === "flower") {
+        return "f";
+      }
+
+    }
+
+    else {
+
+      if(imageType === "insect") {
+        return "f";
+      }
+
+      if(imageType === "flower") {
+        return "j";
+      }
+
+    }
+
+  }
+
+
+  return null;
+}
+
+
+// ========================================================
+// 条件名取得
+// ========================================================
+
+function getConditionLabel(
+  loopNumber
+) {
+
+  const flowerKey =
+    getCorrectKey(
+      loopNumber,
+      "flower"
+    );
+
+
+  const insectKey =
+    getCorrectKey(
+      loopNumber,
+      "insect"
+    );
+
+
+  const flowerLabel =
+    flowerKey === "f"
+      ? "好き"
+      : "嫌い";
+
+
+  const insectLabel =
+    insectKey === "f"
+      ? "好き"
+      : "嫌い";
+
+
+  return `花-${flowerLabel}，虫-${insectLabel}`;
+}
+
+
+// ========================================================
+// 正誤判定
+// ========================================================
+
+function checkCorrectness(
+  loopNumber,
+  image,
+  keyPressed
+) {
+
+  const correctKey =
+    getCorrectKey(
+      loopNumber,
+      image.type
+    );
+
+
+  if(
+    keyPressed === correctKey
+  ) {
+
+    return "○";
+
+  }
+
+
+  return "×";
+}
+
+
+// ========================================================
+// 誤答フィードバック
+// ========================================================
+
+function showErrorFeedback() {
+
+  container.innerHTML =
+    "";
+
+
+  container.style.display =
+    "block";
+
+
+  const feedback =
+    document.createElement(
+      "span"
+    );
+
+
+  feedback.className =
+    "feedback";
+
+
+  feedback.textContent =
+    "×";
+
+
+  container.appendChild(
+    feedback
+  );
+
+
+  state =
+    "feedback";
+
+
+  setTimeout(
+    () => {
+
+      showPlusBeforeImage();
+
+    },
+
+    700
+  );
+
+}
+
+
+// ========================================================
+// 正答試行の平均RT
+//
+// 採用条件
+// ・正答
+// ・0.2秒以上
+// ・2.0秒以下
+// ========================================================
+
+function calculateCorrectMeanRT(
+  loopNumber,
+  imageType
+) {
+
+  const index =
+    loopNumber - 1;
+
+
+  const rts =
+    allLoopRts[index];
+
+
+  const images =
+    allLoopImages[index];
+
+
+  const correctness =
+    allLoopCorrectness[index];
+
+
+  const correctRts = [];
+
+
+  for(
+    let i = 0;
+    i < images.length;
+    i++
+  ) {
+
+    if(
+      images[i].type === imageType &&
+      correctness[i] === "○" &&
+      rts[i] >= 200 &&
+      rts[i] <= 2000
+    ) {
+
+      correctRts.push(
+        rts[i]
+      );
+
+    }
+
+  }
+
+
+  if(
+    correctRts.length === 0
+  ) {
+
+    return null;
+
+  }
+
+
+  const meanMs =
+
+    correctRts.reduce(
+      (sum, rt) =>
+        sum + rt,
+      0
+    )
+
+    /
+    correctRts.length;
+
+
+  return meanMs / 1000;
+}
+
+
+// ========================================================
+// 4条件の平均RT
+// ========================================================
+
+function calculateAllCorrectMeanRTs() {
+
+  correctMeanRTs.loop2.flower =
+    calculateCorrectMeanRT(
+      2,
+      "flower"
+    );
+
+
+  correctMeanRTs.loop2.insect =
+    calculateCorrectMeanRT(
+      2,
+      "insect"
+    );
+
+
+  correctMeanRTs.loop4.flower =
+    calculateCorrectMeanRT(
+      4,
+      "flower"
+    );
+
+
+  correctMeanRTs.loop4.insect =
+    calculateCorrectMeanRT(
+      4,
+      "insect"
+    );
+
+}
+
+
+// ========================================================
+// Googleフォーム送信
+//
+// 送信順を条件ベースで固定
+//
+// entry.30048019
+//   学籍番号
+//
+// entry.1798634271
+//   花-好き・虫-嫌い条件：花RT
+//
+// entry.1611279218
+//   花-好き・虫-嫌い条件：虫RT
+//
+// entry.126129908
+//   花-嫌い・虫-好き条件：花RT
+//
+// entry.1280501658
+//   花-嫌い・虫-好き条件：虫RT
+// ========================================================
+
+function sendToGoogleForm() {
+
+  if(
+    formSubmitted
+  ) {
+
+    return;
+
+  }
+
+
+  // ------------------------------------------------------
+  // 条件に応じてLoop2とLoop4を入れ替える
+  // ------------------------------------------------------
+
+  let flowerLikeInsectDislikeFlowerRT;
+  let flowerLikeInsectDislikeInsectRT;
+
+  let flowerDislikeInsectLikeFlowerRT;
+  let flowerDislikeInsectLikeInsectRT;
+
+
+  // ======================================================
+  // 学籍番号が偶数
+  //
+  // Loop2
+  // 花-嫌い・虫-好き
+  //
+  // Loop4
+  // 花-好き・虫-嫌い
+  // ======================================================
+
+  if(studentIsEven) {
+
+    flowerLikeInsectDislikeFlowerRT =
+      correctMeanRTs.loop4.flower;
+
+    flowerLikeInsectDislikeInsectRT =
+      correctMeanRTs.loop4.insect;
+
+
+    flowerDislikeInsectLikeFlowerRT =
+      correctMeanRTs.loop2.flower;
+
+    flowerDislikeInsectLikeInsectRT =
+      correctMeanRTs.loop2.insect;
+
+  }
+
+
+  // ======================================================
+  // 学籍番号が奇数
+  //
+  // Loop2
+  // 花-好き・虫-嫌い
+  //
+  // Loop4
+  // 花-嫌い・虫-好き
+  // ======================================================
+
+  else {
+
+    flowerLikeInsectDislikeFlowerRT =
+      correctMeanRTs.loop2.flower;
+
+    flowerLikeInsectDislikeInsectRT =
+      correctMeanRTs.loop2.insect;
+
+
+    flowerDislikeInsectLikeFlowerRT =
+      correctMeanRTs.loop4.flower;
+
+    flowerDislikeInsectLikeInsectRT =
+      correctMeanRTs.loop4.insect;
+
+  }
+
+
+  const formData =
+    new FormData();
+
+
+  // 学籍番号
+  formData.append(
+    "entry.30048019",
+    studentId
+  );
+
+
+  // 花-好き・虫-嫌い条件：花RT
+  formData.append(
+    "entry.1798634271",
+
+    flowerLikeInsectDislikeFlowerRT === null
+
+      ? ""
+
+      : flowerLikeInsectDislikeFlowerRT
+  );
+
+
+  // 花-好き・虫-嫌い条件：虫RT
+  formData.append(
+    "entry.1611279218",
+
+    flowerLikeInsectDislikeInsectRT === null
+
+      ? ""
+
+      : flowerLikeInsectDislikeInsectRT
+  );
+
+
+  // 花-嫌い・虫-好き条件：花RT
+  formData.append(
+    "entry.126129908",
+
+    flowerDislikeInsectLikeFlowerRT === null
+
+      ? ""
+
+      : flowerDislikeInsectLikeFlowerRT
+  );
+
+
+  // 花-嫌い・虫-好き条件：虫RT
+  formData.append(
+    "entry.1280501658",
+
+    flowerDislikeInsectLikeInsectRT === null
+
+      ? ""
+
+      : flowerDislikeInsectLikeInsectRT
+  );
+
+
+  fetch(
+    GOOGLE_FORM_URL,
+    {
+
+      method: "POST",
+
+      mode: "no-cors",
+
+      body: formData
+
+    }
+  );
+
+
+  formSubmitted =
+    true;
+}
+
+
+// ========================================================
+// ループ開始
+// ========================================================
+
+function startLoop(
+  loopNumber
+) {
+
+  const isPractice =
+
+    loopNumber === 1 ||
+    loopNumber === 3;
+
+
+  loopImages =
+
+    isPractice
+
+      ? [...practiceImages]
+
+      : [...mainImages];
+
+
+  shuffle(
+    loopImages
+  );
+
+
+  allLoopImages.push(
+    [...loopImages]
+  );
+
+
+  currentIndex =
+    0;
+
+
+  rtList =
+    [];
+
+
+  correctnessList =
+    [];
+
+
+  showInstruction(
+    loopNumber
+  );
+
+}
+
+
+// ========================================================
+// 各ループ開始前の教示
+// ========================================================
+
+function showInstruction(
+  loopNumber
+) {
+
+  waitDiv.style.display =
+    "none";
+
+
+  const isPractice =
+    loopNumber === 1 ||
+    loopNumber === 3;
+
+
+  const insectKey =
+    getCorrectKey(
+      loopNumber,
+      "insect"
+    );
+
+
+  const flowerKey =
+    getCorrectKey(
+      loopNumber,
+      "flower"
+    );
+
+
+  const insectLabel =
+    insectKey === "f"
+      ? "好き（Fキー）"
+      : "嫌い（Jキー）";
+
+
+  const flowerLabel =
+    flowerKey === "f"
+      ? "好き（Fキー）"
+      : "嫌い（Jキー）";
+
+
+  const startText =
+    isPractice
+
+      ? "FキーまたはJキーを押すと練習が始まります"
+
+      : "FキーまたはJキーを押すと本番が始まります";
+
+
+  instructionDiv.innerHTML = `
+    両手の人指し指をFキーとJキーにおいてください<br>
+    表示された画像についてFキーまたはJキーをできる限り早く正確に押してください<br><br>
+
+    ・虫→${insectLabel}<br>
+    ・花→${flowerLabel}<br><br>
+
+    ${startText}
+  `;
+
+
+  instructionDiv.style.display =
+    "block";
+
+
+  state =
+    "instruction";
+
+}
+
+
+// ========================================================
+// 30秒休憩
+// ========================================================
+
+function startRest() {
+
+  container.style.display =
+    "none";
+
+
+  labelsDiv.style.display =
+    "none";
+
+
+  instructionDiv.style.display =
+    "none";
+
+
+  waitDiv.innerHTML =
+    "30秒休憩しましょう";
+
+
+  waitDiv.style.display =
+    "block";
+
+
+  state =
+    "rest";
+
+
+  setTimeout(
+    () => {
+
+      waitDiv.style.display =
+        "none";
+
+
+      loopCount++;
+
+
+      startLoop(
+        loopCount
+      );
+
+    },
+
+    30000
+  );
+
+}
+
+
+// ========================================================
+// 注視点 → 画像
+// ========================================================
+
+function showPlusBeforeImage() {
+
+
+  if(
+    currentIndex >=
+    loopImages.length
+  ) {
+
+
+    allLoopRts.push(
+      [...rtList]
+    );
+
+
+    allLoopCorrectness.push(
+      [...correctnessList]
+    );
+
+
+    container.style.display =
+      "none";
+
+
+    labelsDiv.style.display =
+      "none";
+
+
+    if(
+      loopCount >=
+      maxLoops
+    ) {
+
+      displayAllResults();
+
+    }
+
+    else {
+
+      startRest();
+
+    }
+
+
     return;
   }
-});
 
-document.getElementById("copy-btn").addEventListener("click", function() {
-  let text = "試行\t反転\t角度\t正誤\t反応時間(ms)\n";
-  results.forEach(r => {
-    text += `${r.trial}\t${r.inversion}\t${r.angle}\t${r.accuracy}\t${r.rt}\n`;
-  });
 
-  navigator.clipboard.writeText(text).then(() => {
-    alert("結果をコピーしました！");
-  });
-});
+  container.innerHTML =
+    "";
+
+
+  container.style.display =
+    "block";
+
+
+  labelsDiv.style.display =
+    "flex";
+
+
+  const plus =
+    document.createElement(
+      "span"
+    );
+
+
+  plus.className =
+    "plus";
+
+
+  plus.textContent =
+    "＋";
+
+
+  container.appendChild(
+    plus
+  );
+
+
+  state =
+    "plus";
+
+
+  setTimeout(
+    () => {
+
+
+      container.innerHTML =
+        "";
+
+
+      const img =
+        document.createElement(
+          "img"
+        );
+
+
+      img.src =
+        loopImages[
+          currentIndex
+        ].file;
+
+
+      container.appendChild(
+        img
+      );
+
+
+      labelsDiv.style.display =
+        "flex";
+
+
+      startTime =
+        Date.now();
+
+
+      currentIndex++;
+
+
+      state =
+        "image";
+
+
+    },
+
+    2000
+  );
+
+}
+
+
+// ========================================================
+// 結果表示
+// ========================================================
+
+function displayAllResults() {
+
+
+  calculateAllCorrectMeanRTs();
+
+
+  sendToGoogleForm();
+
+
+  resultsDiv.style.display =
+    "block";
+
+
+  let html =
+    "<h2>反応一覧表</h2>";
+
+
+  html += `
+    <table>
+      <tr>
+        <th>条件</th>
+        <th>画像</th>
+        <th>反応時間（秒）</th>
+        <th>正誤</th>
+      </tr>
+  `;
+
+
+  for(
+    let l = 0;
+    l < allLoopRts.length;
+    l++
+  ) {
+
+
+    if(
+      l + 1 !== 2 &&
+      l + 1 !== 4
+    ) {
+
+      continue;
+
+    }
+
+
+    const loopNumber =
+      l + 1;
+
+
+    const conditionLabel =
+      getConditionLabel(
+        loopNumber
+      );
+
+
+    const rts =
+      allLoopRts[l];
+
+
+    const loopImgs =
+      allLoopImages[l];
+
+
+    const correctness =
+      allLoopCorrectness[l];
+
+
+    for(
+      let i = 0;
+      i < loopImgs.length;
+      i++
+    ) {
+
+
+      const rtSec =
+        (
+          rts[i] / 1000
+        ).toPrecision(4);
+
+
+      const imgLabel =
+
+        loopImgs[i].type === "insect"
+
+          ? "虫"
+
+          : loopImgs[i].type === "flower"
+
+          ? "花"
+
+          : loopImgs[i].type;
+
+
+      html += `
+        <tr>
+          <td>${conditionLabel}</td>
+          <td>${imgLabel}</td>
+          <td>${rtSec}</td>
+          <td>${correctness[i]}</td>
+        </tr>
+      `;
+
+    }
+
+  }
+
+
+  html +=
+    "</table>";
+
+
+  resultsDiv.innerHTML =
+    html;
+
+
+  container.style.display =
+    "none";
+
+
+  labelsDiv.style.display =
+    "none";
+
+
+  instructionDiv.style.display =
+    "none";
+
+
+  waitDiv.style.display =
+    "none";
+
+
+  state =
+    "finished";
+
+}
+
 </script>
 
 </body>
 </html>
-
