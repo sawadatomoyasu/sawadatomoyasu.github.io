@@ -25,7 +25,8 @@
 
   #imageContainer img,
   #imageContainer span.plus,
-  #imageContainer span.feedback {
+  #imageContainer span.feedback,
+  #imageContainer span.wordStimulus {
     position: absolute;
     left: 50%;
     top: 50%;
@@ -43,6 +44,13 @@
     font-size: 80px;
     font-weight: bold;
     color: red;
+  }
+
+  #imageContainer span.wordStimulus {
+    font-size: 72px;
+    font-weight: bold;
+    color: #333;
+    white-space: nowrap;
   }
 
   #labels {
@@ -160,8 +168,8 @@
   <div id="imageContainer"></div>
 
   <div id="labels">
-    <div>好き (F)</div>
-    <div>嫌い (J)</div>
+    <div>快 (F)</div>
+    <div>不快 (J)</div>
   </div>
 
 </div>
@@ -186,14 +194,50 @@ let formSubmitted = false;
 
 
 // ========================================================
-// 画像リスト
+// 快・不快の属性語
+//
+// 練習：各5語
+// 本番：各10語
 // ========================================================
 
-const mainImages = [];
+const pleasantWords = [
+  "幸福",
+  "喜び",
+  "愛情",
+  "希望",
+  "笑顔",
+  "成功",
+  "安心",
+  "感謝",
+  "快楽",
+  "平和"
+];
+
+const unpleasantWords = [
+  "嫌悪",
+  "苦痛",
+  "恐怖",
+  "憎悪",
+  "悲哀",
+  "失敗",
+  "不安",
+  "怒り",
+  "苦悩",
+  "不幸"
+];
+
+
+// ========================================================
+// 本番刺激
+//
+// 虫10 + 花10 + 快語10 + 不快語10 = 40試行
+// ========================================================
+
+const mainStimuli = [];
 
 for(let i = 1; i <= 10; i++) {
 
-  mainImages.push({
+  mainStimuli.push({
     type: "insect",
     file: `insects/${i}.jpg`
   });
@@ -202,19 +246,43 @@ for(let i = 1; i <= 10; i++) {
 
 for(let i = 1; i <= 10; i++) {
 
-  mainImages.push({
+  mainStimuli.push({
     type: "flower",
     file: `flower/${i}.jpg`
   });
 
 }
 
+pleasantWords.forEach((word) => {
 
-const practiceImages = [];
+  mainStimuli.push({
+    type: "pleasant",
+    text: word
+  });
+
+});
+
+unpleasantWords.forEach((word) => {
+
+  mainStimuli.push({
+    type: "unpleasant",
+    text: word
+  });
+
+});
+
+
+// ========================================================
+// 練習刺激
+//
+// 虫5 + 花5 + 快語5 + 不快語5 = 20試行
+// ========================================================
+
+const practiceStimuli = [];
 
 for(let i = 1; i <= 5; i++) {
 
-  practiceImages.push({
+  practiceStimuli.push({
     type: "insect",
     file: `insects_practice/${i}.jpg`
   });
@@ -223,12 +291,30 @@ for(let i = 1; i <= 5; i++) {
 
 for(let i = 1; i <= 5; i++) {
 
-  practiceImages.push({
+  practiceStimuli.push({
     type: "flower",
     file: `flower_practice/${i}.jpg`
   });
 
 }
+
+pleasantWords.slice(0, 5).forEach((word) => {
+
+  practiceStimuli.push({
+    type: "pleasant",
+    text: word
+  });
+
+});
+
+unpleasantWords.slice(0, 5).forEach((word) => {
+
+  practiceStimuli.push({
+    type: "unpleasant",
+    text: word
+  });
+
+});
 
 
 // ========================================================
@@ -241,12 +327,12 @@ let loopCount = 0;
 let maxLoops = 4;
 let currentIndex = 0;
 
-let loopImages = [];
+let loopStimuli = [];
 let rtList = [];
 let correctnessList = [];
 
 let allLoopRts = [];
-let allLoopImages = [];
+let allLoopStimuli = [];
 let allLoopCorrectness = [];
 
 let startTime = 0;
@@ -426,13 +512,13 @@ document.addEventListener(
           "none";
 
 
-        showPlusBeforeImage();
+        showPlusBeforeStimulus();
 
 
         break;
 
 
-      case "image":
+      case "stimulus":
 
         const rt =
           Date.now() - startTime;
@@ -443,7 +529,7 @@ document.addEventListener(
 
             loopCount,
 
-            loopImages[
+            loopStimuli[
               currentIndex - 1
             ],
 
@@ -472,7 +558,7 @@ document.addEventListener(
 
         else {
 
-          showPlusBeforeImage();
+          showPlusBeforeStimulus();
 
         }
 
@@ -488,6 +574,10 @@ document.addEventListener(
 // ========================================================
 // 正答キー取得
 //
+// 属性語は全ループ共通
+// 快語   → F
+// 不快語 → J
+//
 // 偶数学籍番号
 // ループ1・2：虫→F、花→J
 // ループ3・4：虫→J、花→F
@@ -497,8 +587,22 @@ document.addEventListener(
 
 function getCorrectKey(
   loopNumber,
-  imageType
+  stimulusType
 ) {
+
+  if(stimulusType === "pleasant") {
+
+    return "f";
+
+  }
+
+
+  if(stimulusType === "unpleasant") {
+
+    return "j";
+
+  }
+
 
   const firstHalf =
     loopNumber === 1 ||
@@ -509,11 +613,11 @@ function getCorrectKey(
 
     if(firstHalf) {
 
-      if(imageType === "insect") {
+      if(stimulusType === "insect") {
         return "f";
       }
 
-      if(imageType === "flower") {
+      if(stimulusType === "flower") {
         return "j";
       }
 
@@ -521,11 +625,11 @@ function getCorrectKey(
 
     else {
 
-      if(imageType === "insect") {
+      if(stimulusType === "insect") {
         return "j";
       }
 
-      if(imageType === "flower") {
+      if(stimulusType === "flower") {
         return "f";
       }
 
@@ -537,11 +641,11 @@ function getCorrectKey(
 
     if(firstHalf) {
 
-      if(imageType === "insect") {
+      if(stimulusType === "insect") {
         return "j";
       }
 
-      if(imageType === "flower") {
+      if(stimulusType === "flower") {
         return "f";
       }
 
@@ -549,11 +653,11 @@ function getCorrectKey(
 
     else {
 
-      if(imageType === "insect") {
+      if(stimulusType === "insect") {
         return "f";
       }
 
-      if(imageType === "flower") {
+      if(stimulusType === "flower") {
         return "j";
       }
 
@@ -590,14 +694,14 @@ function getConditionLabel(
 
   const flowerLabel =
     flowerKey === "f"
-      ? "好き"
-      : "嫌い";
+      ? "快"
+      : "不快";
 
 
   const insectLabel =
     insectKey === "f"
-      ? "好き"
-      : "嫌い";
+      ? "快"
+      : "不快";
 
 
   return `花-${flowerLabel}，虫-${insectLabel}`;
@@ -610,14 +714,14 @@ function getConditionLabel(
 
 function checkCorrectness(
   loopNumber,
-  image,
+  stimulus,
   keyPressed
 ) {
 
   const correctKey =
     getCorrectKey(
       loopNumber,
-      image.type
+      stimulus.type
     );
 
 
@@ -674,7 +778,7 @@ function showErrorFeedback() {
   setTimeout(
     () => {
 
-      showPlusBeforeImage();
+      showPlusBeforeStimulus();
 
     },
 
@@ -691,11 +795,14 @@ function showErrorFeedback() {
 // ・正答
 // ・0.2秒以上
 // ・2.0秒以下
+//
+// 従来通り、Googleフォームへ送る平均RTは
+// 花と虫についてのみ算出する
 // ========================================================
 
 function calculateCorrectMeanRT(
   loopNumber,
-  imageType
+  stimulusType
 ) {
 
   const index =
@@ -706,8 +813,8 @@ function calculateCorrectMeanRT(
     allLoopRts[index];
 
 
-  const images =
-    allLoopImages[index];
+  const stimuli =
+    allLoopStimuli[index];
 
 
   const correctness =
@@ -719,12 +826,12 @@ function calculateCorrectMeanRT(
 
   for(
     let i = 0;
-    i < images.length;
+    i < stimuli.length;
     i++
   ) {
 
     if(
-      images[i].type === imageType &&
+      stimuli[i].type === stimulusType &&
       correctness[i] === "○" &&
       rts[i] >= 200 &&
       rts[i] <= 2000
@@ -809,16 +916,16 @@ function calculateAllCorrectMeanRTs() {
 //   学籍番号
 //
 // entry.1798634271
-//   花-好き・虫-嫌い条件：花RT
+//   花-快・虫-不快条件：花RT
 //
 // entry.1611279218
-//   花-好き・虫-嫌い条件：虫RT
+//   花-快・虫-不快条件：虫RT
 //
 // entry.126129908
-//   花-嫌い・虫-好き条件：花RT
+//   花-不快・虫-快条件：花RT
 //
 // entry.1280501658
-//   花-嫌い・虫-好き条件：虫RT
+//   花-不快・虫-快条件：虫RT
 // ========================================================
 
 function sendToGoogleForm() {
@@ -832,40 +939,36 @@ function sendToGoogleForm() {
   }
 
 
-  // ------------------------------------------------------
-  // 条件に応じてLoop2とLoop4を入れ替える
-  // ------------------------------------------------------
+  let flowerPleasantInsectUnpleasantFlowerRT;
+  let flowerPleasantInsectUnpleasantInsectRT;
 
-  let flowerLikeInsectDislikeFlowerRT;
-  let flowerLikeInsectDislikeInsectRT;
-
-  let flowerDislikeInsectLikeFlowerRT;
-  let flowerDislikeInsectLikeInsectRT;
+  let flowerUnpleasantInsectPleasantFlowerRT;
+  let flowerUnpleasantInsectPleasantInsectRT;
 
 
   // ======================================================
   // 学籍番号が偶数
   //
   // Loop2
-  // 花-嫌い・虫-好き
+  // 花-不快・虫-快
   //
   // Loop4
-  // 花-好き・虫-嫌い
+  // 花-快・虫-不快
   // ======================================================
 
   if(studentIsEven) {
 
-    flowerLikeInsectDislikeFlowerRT =
+    flowerPleasantInsectUnpleasantFlowerRT =
       correctMeanRTs.loop4.flower;
 
-    flowerLikeInsectDislikeInsectRT =
+    flowerPleasantInsectUnpleasantInsectRT =
       correctMeanRTs.loop4.insect;
 
 
-    flowerDislikeInsectLikeFlowerRT =
+    flowerUnpleasantInsectPleasantFlowerRT =
       correctMeanRTs.loop2.flower;
 
-    flowerDislikeInsectLikeInsectRT =
+    flowerUnpleasantInsectPleasantInsectRT =
       correctMeanRTs.loop2.insect;
 
   }
@@ -875,25 +978,25 @@ function sendToGoogleForm() {
   // 学籍番号が奇数
   //
   // Loop2
-  // 花-好き・虫-嫌い
+  // 花-快・虫-不快
   //
   // Loop4
-  // 花-嫌い・虫-好き
+  // 花-不快・虫-快
   // ======================================================
 
   else {
 
-    flowerLikeInsectDislikeFlowerRT =
+    flowerPleasantInsectUnpleasantFlowerRT =
       correctMeanRTs.loop2.flower;
 
-    flowerLikeInsectDislikeInsectRT =
+    flowerPleasantInsectUnpleasantInsectRT =
       correctMeanRTs.loop2.insect;
 
 
-    flowerDislikeInsectLikeFlowerRT =
+    flowerUnpleasantInsectPleasantFlowerRT =
       correctMeanRTs.loop4.flower;
 
-    flowerDislikeInsectLikeInsectRT =
+    flowerUnpleasantInsectPleasantInsectRT =
       correctMeanRTs.loop4.insect;
 
   }
@@ -903,58 +1006,53 @@ function sendToGoogleForm() {
     new FormData();
 
 
-  // 学籍番号
   formData.append(
     "entry.30048019",
     studentId
   );
 
 
-  // 花-好き・虫-嫌い条件：花RT
   formData.append(
     "entry.1798634271",
 
-    flowerLikeInsectDislikeFlowerRT === null
+    flowerPleasantInsectUnpleasantFlowerRT === null
 
       ? ""
 
-      : flowerLikeInsectDislikeFlowerRT
+      : flowerPleasantInsectUnpleasantFlowerRT
   );
 
 
-  // 花-好き・虫-嫌い条件：虫RT
   formData.append(
     "entry.1611279218",
 
-    flowerLikeInsectDislikeInsectRT === null
+    flowerPleasantInsectUnpleasantInsectRT === null
 
       ? ""
 
-      : flowerLikeInsectDislikeInsectRT
+      : flowerPleasantInsectUnpleasantInsectRT
   );
 
 
-  // 花-嫌い・虫-好き条件：花RT
   formData.append(
     "entry.126129908",
 
-    flowerDislikeInsectLikeFlowerRT === null
+    flowerUnpleasantInsectPleasantFlowerRT === null
 
       ? ""
 
-      : flowerDislikeInsectLikeFlowerRT
+      : flowerUnpleasantInsectPleasantFlowerRT
   );
 
 
-  // 花-嫌い・虫-好き条件：虫RT
   formData.append(
     "entry.1280501658",
 
-    flowerDislikeInsectLikeInsectRT === null
+    flowerUnpleasantInsectPleasantInsectRT === null
 
       ? ""
 
-      : flowerDislikeInsectLikeInsectRT
+      : flowerUnpleasantInsectPleasantInsectRT
   );
 
 
@@ -991,22 +1089,22 @@ function startLoop(
     loopNumber === 3;
 
 
-  loopImages =
+  loopStimuli =
 
     isPractice
 
-      ? [...practiceImages]
+      ? [...practiceStimuli]
 
-      : [...mainImages];
+      : [...mainStimuli];
 
 
   shuffle(
-    loopImages
+    loopStimuli
   );
 
 
-  allLoopImages.push(
-    [...loopImages]
+  allLoopStimuli.push(
+    [...loopStimuli]
   );
 
 
@@ -1062,14 +1160,14 @@ function showInstruction(
 
   const insectLabel =
     insectKey === "f"
-      ? "好き（Fキー）"
-      : "嫌い（Jキー）";
+      ? "快（Fキー）"
+      : "不快（Jキー）";
 
 
   const flowerLabel =
     flowerKey === "f"
-      ? "好き（Fキー）"
-      : "嫌い（Jキー）";
+      ? "快（Fキー）"
+      : "不快（Jキー）";
 
 
   const startText =
@@ -1082,8 +1180,10 @@ function showInstruction(
 
   instructionDiv.innerHTML = `
     両手の人指し指をFキーとJキーにおいてください<br>
-    表示された画像についてFキーまたはJキーをできる限り早く正確に押してください<br><br>
+    表示された刺激についてFキーまたはJキーをできる限り早く正確に押してください<br><br>
 
+    ・快を表す言葉→快（Fキー）<br>
+    ・不快を表す言葉→不快（Jキー）<br>
     ・虫→${insectLabel}<br>
     ・花→${flowerLabel}<br><br>
 
@@ -1154,15 +1254,15 @@ function startRest() {
 
 
 // ========================================================
-// 注視点 → 画像
+// 注視点 → 刺激
 // ========================================================
 
-function showPlusBeforeImage() {
+function showPlusBeforeStimulus() {
 
 
   if(
     currentIndex >=
-    loopImages.length
+    loopStimuli.length
   ) {
 
 
@@ -1247,21 +1347,54 @@ function showPlusBeforeImage() {
         "";
 
 
-      const img =
-        document.createElement(
-          "img"
+      const stimulus =
+        loopStimuli[
+          currentIndex
+        ];
+
+
+      if(
+        stimulus.type === "insect" ||
+        stimulus.type === "flower"
+      ) {
+
+        const img =
+          document.createElement(
+            "img"
+          );
+
+
+        img.src =
+          stimulus.file;
+
+
+        container.appendChild(
+          img
         );
 
+      }
 
-      img.src =
-        loopImages[
-          currentIndex
-        ].file;
+      else {
+
+        const word =
+          document.createElement(
+            "span"
+          );
 
 
-      container.appendChild(
-        img
-      );
+        word.className =
+          "wordStimulus";
+
+
+        word.textContent =
+          stimulus.text;
+
+
+        container.appendChild(
+          word
+        );
+
+      }
 
 
       labelsDiv.style.display =
@@ -1276,7 +1409,7 @@ function showPlusBeforeImage() {
 
 
       state =
-        "image";
+        "stimulus";
 
 
     },
@@ -1312,7 +1445,7 @@ function displayAllResults() {
     <table>
       <tr>
         <th>条件</th>
-        <th>画像</th>
+        <th>刺激</th>
         <th>反応時間（秒）</th>
         <th>正誤</th>
       </tr>
@@ -1350,8 +1483,8 @@ function displayAllResults() {
       allLoopRts[l];
 
 
-    const loopImgs =
-      allLoopImages[l];
+    const loopStimuliForResult =
+      allLoopStimuli[l];
 
 
     const correctness =
@@ -1360,7 +1493,7 @@ function displayAllResults() {
 
     for(
       let i = 0;
-      i < loopImgs.length;
+      i < loopStimuliForResult.length;
       i++
     ) {
 
@@ -1371,23 +1504,27 @@ function displayAllResults() {
         ).toPrecision(4);
 
 
-      const imgLabel =
+      const stimulus =
+        loopStimuliForResult[i];
 
-        loopImgs[i].type === "insect"
+
+      const stimulusLabel =
+
+        stimulus.type === "insect"
 
           ? "虫"
 
-          : loopImgs[i].type === "flower"
+          : stimulus.type === "flower"
 
           ? "花"
 
-          : loopImgs[i].type;
+          : stimulus.text;
 
 
       html += `
         <tr>
           <td>${conditionLabel}</td>
-          <td>${imgLabel}</td>
+          <td>${stimulusLabel}</td>
           <td>${rtSec}</td>
           <td>${correctness[i]}</td>
         </tr>
