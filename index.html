@@ -186,6 +186,21 @@
 const GOOGLE_FORM_URL =
   "https://docs.google.com/forms/d/e/1FAIpQLSf4dK0Un44FDoxOQbFWQsPS5cqRkmRCf7185aqU3irpJehNaA/formResponse";
 
+
+// Googleフォームの各設問
+const FORM_ENTRY_STUDENT_ID =
+  "entry.30048019";
+
+const FORM_ENTRY_INSECT_UNPLEASANT_FLOWER_PLEASANT =
+  "entry.1798634271";
+
+const FORM_ENTRY_INSECT_PLEASANT_FLOWER_UNPLEASANT =
+  "entry.1611279218";
+
+const FORM_ENTRY_IAT_EFFECT =
+  "entry.126129908";
+
+
 let studentId = "";
 
 let studentIsEven = null;
@@ -339,22 +354,26 @@ let startTime = 0;
 
 
 // ========================================================
-// 平均反応時間
+// 条件別平均RT
+//
+// 本番ブロック40試行全体の平均
+// ・虫
+// ・花
+// ・快語
+// ・不快語
+//
+// をすべて含む
 // ========================================================
 
-let correctMeanRTs = {
+let conditionMeanRTs = {
 
-  loop2: {
-    flower: null,
-    insect: null
-  },
+  insectUnpleasantFlowerPleasant: null,
 
-  loop4: {
-    flower: null,
-    insect: null
-  }
+  insectPleasantFlowerUnpleasant: null
 
 };
+
+let iatEffect = null;
 
 
 // ========================================================
@@ -575,12 +594,21 @@ document.addEventListener(
 // 正答キー取得
 //
 // 属性語は全ループ共通
+//
 // 快語   → F
 // 不快語 → J
 //
+//
 // 偶数学籍番号
-// ループ1・2：虫→F、花→J
-// ループ3・4：虫→J、花→F
+//
+// ループ1・2
+//   虫 → 快(F)
+//   花 → 不快(J)
+//
+// ループ3・4
+//   虫 → 不快(J)
+//   花 → 快(F)
+//
 //
 // 奇数学籍番号は逆
 // ========================================================
@@ -704,7 +732,7 @@ function getConditionLabel(
       : "不快";
 
 
-  return `花-${flowerLabel}，虫-${insectLabel}`;
+  return `虫-${insectLabel}，花-${flowerLabel}`;
 }
 
 
@@ -789,20 +817,25 @@ function showErrorFeedback() {
 
 
 // ========================================================
-// 正答試行の平均RT
+// 本番ブロック全体の平均RT
 //
 // 採用条件
-// ・正答
-// ・0.2秒以上
-// ・2.0秒以下
 //
-// 従来通り、Googleフォームへ送る平均RTは
-// 花と虫についてのみ算出する
+// ・正答・誤答をともに含める
+// ・0.2秒未満は除外
+// ・2.0秒超は除外
+//
+// したがって
+//
+//   200 ms <= RT <= 2000 ms
+//
+// の試行のみ平均する
+//
+// 虫・花・快語・不快語をすべて含む
 // ========================================================
 
-function calculateCorrectMeanRT(
-  loopNumber,
-  stimulusType
+function calculateBlockMeanRT(
+  loopNumber
 ) {
 
   const index =
@@ -813,31 +846,21 @@ function calculateCorrectMeanRT(
     allLoopRts[index];
 
 
-  const stimuli =
-    allLoopStimuli[index];
-
-
-  const correctness =
-    allLoopCorrectness[index];
-
-
-  const correctRts = [];
+  const selectedRts = [];
 
 
   for(
     let i = 0;
-    i < stimuli.length;
+    i < rts.length;
     i++
   ) {
 
     if(
-      stimuli[i].type === stimulusType &&
-      correctness[i] === "○" &&
       rts[i] >= 200 &&
       rts[i] <= 2000
     ) {
 
-      correctRts.push(
+      selectedRts.push(
         rts[i]
       );
 
@@ -847,7 +870,7 @@ function calculateCorrectMeanRT(
 
 
   if(
-    correctRts.length === 0
+    selectedRts.length === 0
   ) {
 
     return null;
@@ -857,52 +880,102 @@ function calculateCorrectMeanRT(
 
   const meanMs =
 
-    correctRts.reduce(
+    selectedRts.reduce(
       (sum, rt) =>
         sum + rt,
       0
     )
 
     /
-    correctRts.length;
+    selectedRts.length;
 
 
+  // 秒単位で返す
   return meanMs / 1000;
 }
 
 
 // ========================================================
-// 4条件の平均RT
+// 条件別平均RTとIAT効果を算出
+//
+// IAT効果
+//
+// 虫快・花不快条件の平均RT
+//   －
+// 虫不快・花快条件の平均RT
 // ========================================================
 
-function calculateAllCorrectMeanRTs() {
+function calculateConditionMeanRTs() {
 
-  correctMeanRTs.loop2.flower =
-    calculateCorrectMeanRT(
-      2,
-      "flower"
+  const loop2Mean =
+    calculateBlockMeanRT(
+      2
     );
 
 
-  correctMeanRTs.loop2.insect =
-    calculateCorrectMeanRT(
-      2,
-      "insect"
+  const loop4Mean =
+    calculateBlockMeanRT(
+      4
     );
 
 
-  correctMeanRTs.loop4.flower =
-    calculateCorrectMeanRT(
-      4,
-      "flower"
-    );
+  // ------------------------------------------------------
+  // 偶数学籍番号
+  //
+  // Loop2 = 虫快・花不快
+  // Loop4 = 虫不快・花快
+  // ------------------------------------------------------
+
+  if(studentIsEven) {
+
+    conditionMeanRTs.insectPleasantFlowerUnpleasant =
+      loop2Mean;
+
+    conditionMeanRTs.insectUnpleasantFlowerPleasant =
+      loop4Mean;
+
+  }
 
 
-  correctMeanRTs.loop4.insect =
-    calculateCorrectMeanRT(
-      4,
-      "insect"
-    );
+  // ------------------------------------------------------
+  // 奇数学籍番号
+  //
+  // Loop2 = 虫不快・花快
+  // Loop4 = 虫快・花不快
+  // ------------------------------------------------------
+
+  else {
+
+    conditionMeanRTs.insectUnpleasantFlowerPleasant =
+      loop2Mean;
+
+    conditionMeanRTs.insectPleasantFlowerUnpleasant =
+      loop4Mean;
+
+  }
+
+
+  if(
+    conditionMeanRTs.insectPleasantFlowerUnpleasant !== null &&
+    conditionMeanRTs.insectUnpleasantFlowerPleasant !== null
+  ) {
+
+    iatEffect =
+
+      conditionMeanRTs.insectPleasantFlowerUnpleasant
+
+      -
+
+      conditionMeanRTs.insectUnpleasantFlowerPleasant;
+
+  }
+
+  else {
+
+    iatEffect =
+      null;
+
+  }
 
 }
 
@@ -910,22 +983,13 @@ function calculateAllCorrectMeanRTs() {
 // ========================================================
 // Googleフォーム送信
 //
-// 送信順を条件ベースで固定
+// 1. 学籍番号
+// 2. 虫不快花快ー平均RT
+// 3. 虫快花不快ー平均RT
+// 4. IAT効果
 //
-// entry.30048019
-//   学籍番号
-//
-// entry.1798634271
-//   花-快・虫-不快条件：花RT
-//
-// entry.1611279218
-//   花-快・虫-不快条件：虫RT
-//
-// entry.126129908
-//   花-不快・虫-快条件：花RT
-//
-// entry.1280501658
-//   花-不快・虫-快条件：虫RT
+// IAT効果 =
+// 虫快花不快平均RT - 虫不快花快平均RT
 // ========================================================
 
 function sendToGoogleForm() {
@@ -939,120 +1003,64 @@ function sendToGoogleForm() {
   }
 
 
-  let flowerPleasantInsectUnpleasantFlowerRT;
-  let flowerPleasantInsectUnpleasantInsectRT;
-
-  let flowerUnpleasantInsectPleasantFlowerRT;
-  let flowerUnpleasantInsectPleasantInsectRT;
-
-
-  // ======================================================
-  // 学籍番号が偶数
-  //
-  // Loop2
-  // 花-不快・虫-快
-  //
-  // Loop4
-  // 花-快・虫-不快
-  // ======================================================
-
-  if(studentIsEven) {
-
-    flowerPleasantInsectUnpleasantFlowerRT =
-      correctMeanRTs.loop4.flower;
-
-    flowerPleasantInsectUnpleasantInsectRT =
-      correctMeanRTs.loop4.insect;
-
-
-    flowerUnpleasantInsectPleasantFlowerRT =
-      correctMeanRTs.loop2.flower;
-
-    flowerUnpleasantInsectPleasantInsectRT =
-      correctMeanRTs.loop2.insect;
-
-  }
-
-
-  // ======================================================
-  // 学籍番号が奇数
-  //
-  // Loop2
-  // 花-快・虫-不快
-  //
-  // Loop4
-  // 花-不快・虫-快
-  // ======================================================
-
-  else {
-
-    flowerPleasantInsectUnpleasantFlowerRT =
-      correctMeanRTs.loop2.flower;
-
-    flowerPleasantInsectUnpleasantInsectRT =
-      correctMeanRTs.loop2.insect;
-
-
-    flowerUnpleasantInsectPleasantFlowerRT =
-      correctMeanRTs.loop4.flower;
-
-    flowerUnpleasantInsectPleasantInsectRT =
-      correctMeanRTs.loop4.insect;
-
-  }
-
-
   const formData =
     new FormData();
 
 
+  // ------------------------------------------------------
+  // 学籍番号
+  // ------------------------------------------------------
+
   formData.append(
-    "entry.30048019",
+    FORM_ENTRY_STUDENT_ID,
     studentId
   );
 
 
-  formData.append(
-    "entry.1798634271",
+  // ------------------------------------------------------
+  // 虫不快花快ー平均RT
+  // ------------------------------------------------------
 
-    flowerPleasantInsectUnpleasantFlowerRT === null
+  formData.append(
+    FORM_ENTRY_INSECT_UNPLEASANT_FLOWER_PLEASANT,
+
+    conditionMeanRTs.insectUnpleasantFlowerPleasant === null
 
       ? ""
 
-      : flowerPleasantInsectUnpleasantFlowerRT
+      : conditionMeanRTs.insectUnpleasantFlowerPleasant
   );
 
 
-  formData.append(
-    "entry.1611279218",
+  // ------------------------------------------------------
+  // 虫快花不快ー平均RT
+  // ------------------------------------------------------
 
-    flowerPleasantInsectUnpleasantInsectRT === null
+  formData.append(
+    FORM_ENTRY_INSECT_PLEASANT_FLOWER_UNPLEASANT,
+
+    conditionMeanRTs.insectPleasantFlowerUnpleasant === null
 
       ? ""
 
-      : flowerPleasantInsectUnpleasantInsectRT
+      : conditionMeanRTs.insectPleasantFlowerUnpleasant
   );
 
 
-  formData.append(
-    "entry.126129908",
+  // ------------------------------------------------------
+  // IAT効果
+  //
+  // 虫快花不快 - 虫不快花快
+  // ------------------------------------------------------
 
-    flowerUnpleasantInsectPleasantFlowerRT === null
+  formData.append(
+    FORM_ENTRY_IAT_EFFECT,
+
+    iatEffect === null
 
       ? ""
 
-      : flowerUnpleasantInsectPleasantFlowerRT
-  );
-
-
-  formData.append(
-    "entry.1280501658",
-
-    flowerUnpleasantInsectPleasantInsectRT === null
-
-      ? ""
-
-      : flowerUnpleasantInsectPleasantInsectRT
+      : iatEffect
   );
 
 
@@ -1427,9 +1435,11 @@ function showPlusBeforeStimulus() {
 function displayAllResults() {
 
 
-  calculateAllCorrectMeanRTs();
+  // 条件別平均RTとIAT効果を計算
+  calculateConditionMeanRTs();
 
 
+  // Googleフォームへ送信
   sendToGoogleForm();
 
 
@@ -1459,6 +1469,7 @@ function displayAllResults() {
   ) {
 
 
+    // 本番ブロックのみ表示
     if(
       l + 1 !== 2 &&
       l + 1 !== 4
@@ -1537,6 +1548,50 @@ function displayAllResults() {
 
   html +=
     "</table>";
+
+
+  // ------------------------------------------------------
+  // 条件平均RTとIAT効果も画面下部に表示
+  // ------------------------------------------------------
+
+  html += `
+    <h2>集計結果</h2>
+
+    <table>
+      <tr>
+        <th>指標</th>
+        <th>値（秒）</th>
+      </tr>
+
+      <tr>
+        <td>虫不快・花快 平均RT</td>
+        <td>${
+          conditionMeanRTs.insectUnpleasantFlowerPleasant === null
+            ? ""
+            : conditionMeanRTs.insectUnpleasantFlowerPleasant.toFixed(4)
+        }</td>
+      </tr>
+
+      <tr>
+        <td>虫快・花不快 平均RT</td>
+        <td>${
+          conditionMeanRTs.insectPleasantFlowerUnpleasant === null
+            ? ""
+            : conditionMeanRTs.insectPleasantFlowerUnpleasant.toFixed(4)
+        }</td>
+      </tr>
+
+      <tr>
+        <td>IAT効果</td>
+        <td>${
+          iatEffect === null
+            ? ""
+            : iatEffect.toFixed(4)
+        }</td>
+      </tr>
+
+    </table>
+  `;
 
 
   resultsDiv.innerHTML =
